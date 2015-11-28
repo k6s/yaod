@@ -489,12 +489,12 @@ int					elf_populate_dynsym(pid_t pid, struct link_map *link_map,
 	linked = 0;
 	while (dynsym[i])
 	{
-		if (!dynsym[i]->st_value || 1)
+		if (!dynsym[i]->st_value)
 		{
 			if ((name = elf_symstr(dynstr, dynsym[i]->st_name, strsz)) && *name)
 			{
 				l_map = link_map;
-				while (l_map && (!dynsym[i]->st_value || 1))
+				while (l_map && (!dynsym[i]->st_value))
 				{
 					if ((tables = elf_tables(pid, l_map)))
 					{
