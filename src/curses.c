@@ -7,8 +7,6 @@
 
 void					code_refresh(WINDOW *win, int py, int px)
 {
-	fprintf(stderr, "refresh @ %d %d %d %d %d %d\n", py, px, WIN_CODE_OY, WIN_CODE_OX,
-			WIN_CODE_OY + WIN_CODE_LI, WIN_CODE_OX + WIN_CODE_CO);
 	touchwin(win);
 	prefresh(win, py, px,
 			 WIN_CODE_OY, WIN_CODE_OX, WIN_CODE_OY + WIN_CODE_LI,
@@ -34,8 +32,6 @@ static WINDOW			**get_wins(void)
 		fprintf(stderr, "Cannot get winsize, abort...\n");
 		return (NULL);
 	}
-		fprintf(stderr, "More place pls. (%dx%d vs 400x400)\n", size.ws_row,
-				size.ws_col);
 	if (size.ws_row < 100 && size.ws_col < 165)
 	{
 		fprintf(stderr, "More place pls. (%dx%d vs 100x165)\n", size.ws_row,

@@ -115,10 +115,7 @@ Elf64_Phdr				**elf_phdr(pid_t pid, Elf64_Ehdr *e_hdr)
 		if (!(p_hdr[i] = get_data(pid, e_hdr->e_phoff + 0x400000
 								  + i * e_hdr->e_phentsize,
 								  e_hdr->e_phentsize)))
-		{
-			fprintf(stderr, "cannot get phdr %ld\n", i);
 			return (NULL);
-		}
 		++i;
 	}
 	return (p_hdr);

@@ -184,73 +184,12 @@ void					print_link_map(struct link_map *link_map)
 	}
 }
 
-/*
-Elf64_Shdr				**elf_shdr(pid_t pid, Elf64_Ehdr *e_hdr);
-void					test_elf_data(pid_t pid, t_elf *elf)
-{
-	Elf64_Phdr			**p_hdr;
-
-
-	if (!(p_hdr = elf->p_hdr))
-		return ;
-
-		struct link_map		*link_map;
-		t_tables_addr		*tables;
-		long				addr;
-
-		if (!(link_map = elf->link_map))
-			return ;
-		fprintf(stderr, "here1\n");
-		addr = 0;
-		while (!addr && link_map)
-		{
-		if (!(tables = get_tables(pid, link_map)))
-		{
-		fprintf(stderr, "ERROR GET TABLES\n");
-		return ;
-		}
-		addr = get_symbol_addr(pid, link_map, tables, "memset");
-		link_map = link_map->l_next;
-		} 
-		fprintf(stderr, "memcpy address: %p\n", (void *)addr);
-		free(tables); */
-	/*
-	   Elf64_Shdr		**s_hdr;
-	   char			*strtab;
-	   size_t			idx;
-	   size_t			sidx;
-	   long			addr;
-
-	   fprintf(stderr, "here %d %lu\n", e_hdr->e_shstrndx, e_hdr->e_shoff);
-	   if (!(s_hdr = elf_shdr(pid, e_hdr)))
-	   return ;
-	   addr = s_hdr[e_hdr->e_shstrndx]->sh_offset + 0x400000;
-	   fprintf(stderr, "here\n");
-	   if (!(strtab = get_data(pid, addr, s_hdr[e_hdr->e_shstrndx]->sh_offset + 0x400000)))
-	   ;
-	   idx = 0;
-	   sidx = 0;
-	   fprintf(stderr, "here\n");
-	   while (idx < e_hdr->e_shstrndx)
-	   {
-	   fprintf(stderr, "here\n");
-	   while (strtab[sidx])
-	   write(2, &strtab[sidx++], 1);
-	   ++sidx;
-	   fprintf(stderr, ": sh_addr: %p sh_offset: %p\n");
-	   ++idx;
-	   }
-	   
-} */
-
 char            refresh_exe_state(t_slave *s_slave, char sclean)
 {
 	if (!(s_slave->elf))
 		s_slave->elf = elf_get(s_slave->pid, s_slave->filename);
 	if (s_slave->elf && s_slave->elf->dyn && !(s_slave->elf->link_map))
 		s_slave->elf->link_map = elf_linkmap(s_slave->pid, s_slave->elf->dyn);
-/*	if (s_slave->elf->dyn)
-		test_elf_data(s_slave->pid, s_slave->elf); */
 	if (!s_slave->elf->linked)
 		elf_populate_dynsym(s_slave->pid, s_slave->elf->link_map,
 							s_slave->elf->dynsym, s_slave->elf->dynstr,
@@ -358,7 +297,6 @@ int						open_pty(t_slave *s_slave)
 		perror("Err on open() pty");
 	}
 	tcgetattr(s_slave->fds, &term);
-	fprintf(stderr, "VEOF: %x\n", term.c_cc[VEOF]);
 	term.c_cc[VEOF] = '\x04';
 	tcsetattr(s_slave->fds, TCSADRAIN, &term);
 	return (0);
