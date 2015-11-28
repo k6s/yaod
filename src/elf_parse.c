@@ -193,7 +193,7 @@ void					elf_free_phdr(Elf64_Phdr **p_hdr)
 		i = 0;
 		while (p_hdr[i])
 			free(p_hdr[i++]);
-			++i;
+		++i;
 		free(p_hdr[i]);
 		free(p_hdr);
 	}
@@ -498,16 +498,14 @@ int					elf_populate_dynsym(pid_t pid, struct link_map *link_map,
 				{
 					if ((tables = elf_tables(pid, l_map)))
 					{
-						dynsym[i]->st_value
-							= elf_dynsym_addr(pid, l_map, tables, name);
-						l_map = l_map->l_next;		
+						if ((dynsym[i]->st_value
+							= elf_dynsym_addr(pid, l_map, tables, name)))
+							linked = 1;
 						free(tables->nchains);
 						free(tables);
 					}
 					l_map = l_map->l_next;
 				}
-				if (dynsym[i]->st_value)
-					linked = 1;
 				free(name);
 			}
 		}
