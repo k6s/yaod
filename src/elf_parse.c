@@ -154,10 +154,6 @@ Elf64_Sym				*elf_sym(pid_t pid, Elf64_Dyn *dyn, size_t off)
 					 sizeof(Elf64_Sym)));
 }
 
-/*
- * No hash table can be found anywhere, seems like it disapeared from GNU
- * systems.
- */
 Elf64_Word				elf_hash_entry(pid_t pid, Elf64_Dyn *h_dyn, size_t i)
 {
 	Elf64_Word			val;
@@ -196,10 +192,8 @@ void					elf_free_phdr(Elf64_Phdr **p_hdr)
 	{
 		i = 0;
 		while (p_hdr[i])
-		{
-			free(p_hdr[i]);
+			free(p_hdr[i++]);
 			++i;
-		}
 		free(p_hdr[i]);
 		free(p_hdr);
 	}
@@ -214,10 +208,7 @@ void					elf_free_sym(Elf64_Sym **sym)
 	{
 		i = 0;
 		while (sym[i])
-		{
-			free(sym[i]);
-			++i;
-		}
+			free(sym[i++]);
 		free(sym[i]);
 		free(sym);
 	}
@@ -234,22 +225,6 @@ int						elf_free(t_elf *elf)
 
 char					*elf_symstr(char *strtab, size_t off, Elf64_Xword size)
 {
-	/*	size_t				idx;
-		size_t				c_off;
-
-		c_off = 0;
-		idx = 0;
-		while (idx < size && c_off < off)
-		{
-		fprintf(stderr, "%s %d %d\n", strtab + idx, c_off, off);
-		while (idx < size && *(strtab + idx))
-		++idx;
-		if (idx < size && !*(strtab + idx))
-		++idx;
-		++off;
-		}
-		if (c_off == off && idx < size && memchr(strtab + idx, '\x00', size - idx))
-		return (strdup(strtab + idx)); */
 	if (memchr(strtab + off, 0, size - off))
 		return (strdup(strtab + off));
 	return (NULL);
@@ -314,72 +289,45 @@ Elf64_Word				elf_pseudo_nchains(Elf64_Dyn **dyn)
 	return (-1);
 }
 
+t_elf					*elf_mem(pid_t pid, t_elf *elf)
+{
+	size_t				i;
+
+	if ((elf->p_hdr = elf_phdr(pid, elf->e_hdr)))
+	{
+		i = 0;
+		while (i < elf->e_hdr->e_phnum
+			   && elf->p_hdr[i]->p_type != PT_DYNAMIC)
+			++i;
+		if ((elf->dyn = elf_dyn(pid, elf->p_hdr[i])))
+		{
+			elf->nchains = elf_pseudo_nchains(elf->dyn);
+			elf->dynstr = elf_strtab(pid, elf->dyn, &elf->strsz);
+			elf->dynsym = elf_dynsym(pid, elf->dyn, elf->nchains,
+									 &elf->linked);
+			return (elf);
+		}
+	}
+	elf_free(elf);
+	return (NULL);
+}
+
 t_elf					*elf_get(pid_t pid, char *filename)
 {
 	t_elf				*elf;
-	size_t				i;
 
 	if (!(elf = malloc(sizeof(*elf))))
 		return (NULL);
 	bzero(elf, sizeof(*elf));
 	if ((elf->e_hdr = elf_ehdr(pid)))
 	{
-		i = 0;
 		if (elf_file(filename, elf))
-		{
-			free(elf->e_hdr);
-			free(elf);
-			return (NULL);
-		}
-		if (i < elf->e_hdr->e_phnum
-			&& (elf->p_hdr = elf_phdr(pid, elf->e_hdr)))
-		{
-			while (i < elf->e_hdr->e_phnum
-				   && elf->p_hdr[i]->p_type != PT_DYNAMIC)
-				++i;
-			if ((elf->dyn = elf_dyn(pid, elf->p_hdr[i])))
-			{
-				elf->nchains = elf_pseudo_nchains(elf->dyn);
-				elf->dynstr = elf_strtab(pid, elf->dyn, &elf->strsz);
-				elf->dynsym = elf_dynsym(pid, elf->dyn, elf->nchains,
-										 &elf->linked);
-				return (elf);
-			}
-		}
+			elf->stripped = 1;
+		return (elf_mem(pid, elf));
 	}
-	free(elf);
+	elf_free(elf);
 	return (NULL);
 }
-
-/*
-   long					get_got_addr(pid_t pid, Elf64_Ehdr *e_hdr)
-   {
-   Elf64_Dyn			*s_dyn;
-   Elf64_Phdr			*p_dyn_hdr;
-   long				got;
-   size_t				i;
-
-   got = 0;
-   if ((p_dyn_hdr = elf_phdr_entry(pid, e_hdr, PT_DYNAMIC)))
-   {
-   if (!(s_dyn = get_data(pid, p_dyn_hdr->p_vaddr, sizeof(*s_dyn))))
-   return (0);
-   i = sizeof(*s_dyn);
-   while (s_dyn->d_tag != DT_PLTGOT)
-   {
-   free(s_dyn);
-   if (!(s_dyn = get_data(pid, p_dyn_hdr->p_vaddr + i,
-   sizeof(*s_dyn))))
-   return (0);
-   i += sizeof(*s_dyn);
-   }
-   got = s_dyn->d_un.d_ptr;
-   free(s_dyn);
-   free(p_dyn_hdr);
-   }
-   return (got);
-   }
-   */
 
 long						elf_got_addr(Elf64_Dyn **dyn)
 {
@@ -451,9 +399,9 @@ t_tables_addr				*elf_tables(pid_t pid, struct link_map *link_map)
 	{
 		while (dyn->d_tag)
 		{
-			if (dyn->d_tag == DT_SYMTAB && fprintf(stderr, "SYMTAB\n"))
+			if (dyn->d_tag == DT_SYMTAB)
 				tables->symtab = dyn->d_un.d_ptr;
-			if (dyn->d_tag == DT_STRTAB && fprintf(stderr, "STRTAB\n"))
+			if (dyn->d_tag == DT_STRTAB)
 				tables->strtab = dyn->d_un.d_ptr;
 			if (dyn->d_tag == DT_HASH)
 			{
@@ -472,7 +420,7 @@ t_tables_addr				*elf_tables(pid_t pid, struct link_map *link_map)
 }
 
 char					*elf_addr_dynsym(pid_t pid, struct link_map *link_map,
-							t_tables_addr *s_tables, unsigned long sym_addr)
+										 t_tables_addr *s_tables, unsigned long sym_addr)
 {
 	size_t				i;
 	Elf64_Sym			*sym;

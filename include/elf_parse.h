@@ -36,6 +36,7 @@ struct						s_elf
 	Elf64_Word				nchains;
 	struct link_map			*link_map;
 	char					linked;
+	char					stripped;
 };
 
 /*! \brief Typedef to @ref s_tables_addr */
