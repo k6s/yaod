@@ -76,6 +76,8 @@ char			add_builtins(t_progs *progs)
 		return (-1);
 	if (add_builtin(progs, "px", &print_xnoascii) == -1)
 		return (-1);
+	if (add_builtin(progs, "ps", &print_str) == -1)
+		return (-1);
 	if (add_builtin(progs, "p", &print_val) == -1)
 		return (-1);
 	if (add_builtin(progs, "h", &help) == -1)
