@@ -74,7 +74,6 @@ Elf64_Sym			**elf_file_symtab(int fd, Elf64_Shdr **s_hdr)
 			++j;
 		}
 	}
-	fprintf(stderr, "sym: %p\n", sym);
 	return (sym);
 }
 
@@ -114,9 +113,7 @@ char				*elf_file_shstrtab(int fd, Elf64_Shdr **s_hdr, char *strtab,
 			free(shstrtab);
 			return (NULL);
 		}
-		write(2, shstrtab, *size);
 	}
-	fprintf(stderr, "shstrtab got it\n");
 	return (shstrtab);
 }
 
@@ -164,7 +161,7 @@ ssize_t					elf_file(char *filename, t_elf *elf)
 }
 
 Elf64_Phdr				*elf_phdr_entry(pid_t pid, Elf64_Ehdr *e_hdr,
-										unsigned type)
+										Elf64_Word type)
 {
 	Elf64_Phdr			*p_hdr;
 	ssize_t				i;
@@ -180,7 +177,12 @@ Elf64_Phdr				*elf_phdr_entry(pid_t pid, Elf64_Ehdr *e_hdr,
 			return (NULL);
 		i += sizeof(*p_hdr);
 	}
-	return (p_hdr->p_type == type ? p_hdr : NULL);
+	if (p_hdr && p_hdr->p_type != type)
+	{
+		free(p_hdr);
+		p_hdr = NULL;
+	}
+	return (p_hdr);
 }
 
 Elf64_Phdr				**elf_phdr(pid_t pid, Elf64_Ehdr *e_hdr)
@@ -201,6 +203,38 @@ Elf64_Phdr				**elf_phdr(pid_t pid, Elf64_Ehdr *e_hdr)
 		++i;
 	}
 	return (p_hdr);
+}
+
+Elf64_Dyn				*elf_dyn_entry(pid_t pid, Elf64_Phdr *p_hdr,
+										Elf64_Sxword type)
+{
+	Elf64_Dyn			*dyn;
+	size_t				max;
+	size_t				i;
+	Elf64_Sxword		dtag;
+
+	max = p_hdr->p_memsz / sizeof(Elf64_Dyn);
+	i = 0;
+	if (!(dyn = get_data(pid, p_hdr->p_vaddr + i * sizeof(Elf64_Dyn),
+								sizeof(Elf64_Dyn))))
+		return (NULL);
+	dtag = dyn->d_tag;
+	while (dtag != type && i < max)
+	{
+		free(dyn);
+		if (!(dyn = get_data(pid, p_hdr->p_vaddr + i * sizeof(Elf64_Dyn),
+								sizeof(Elf64_Dyn))))
+			return (NULL);
+		dtag = dyn->d_tag;
+		++i;
+	}
+	if (dtag != type)
+	{
+		free(dyn);
+		dyn = NULL;
+	}
+	return (dyn);
+
 }
 
 Elf64_Dyn				**elf_dyn(pid_t pid, Elf64_Phdr *p_hdr)
@@ -457,30 +491,26 @@ long						elf_got_addr(Elf64_Dyn **dyn)
 	return (0);
 }
 
-static struct link_map		*elf_linkmap_base(pid_t pid, Elf64_Dyn **dyn)
+static struct link_map		*elf_linkmap_base(pid_t pid, Elf64_Dyn *got)
 {
-	long					got_addr;
-	long					*got;
+	long					*lm_addr;
 	struct link_map			*link_map;
 
 	link_map = NULL;
-	if ((got_addr = elf_got_addr(dyn)))
-	{
-		/* link_map is second entry in GOT */
-		got = get_data(pid, got_addr + sizeof(long),
-					   sizeof(long));
-		link_map = get_data(pid, *got, sizeof(*link_map));
-		free(got);
-	}
+	/* link_map is second entry in GOT */
+	lm_addr = get_data(pid, got->d_un.d_ptr + sizeof(long),
+				   sizeof(long));
+	link_map = get_data(pid, *lm_addr, sizeof(*link_map));
+	free(lm_addr);
 	return (link_map);
 }
 
-struct link_map				*elf_linkmap(pid_t pid, Elf64_Dyn **dyn)
+struct link_map				*elf_linkmap(pid_t pid, Elf64_Dyn *got)
 {
 	struct link_map			*link_map;
 	struct link_map			*l;
 
-	link_map = elf_linkmap_base(pid, dyn);
+	link_map = elf_linkmap_base(pid, got);
 	l = link_map;
 	while (link_map)
 	{

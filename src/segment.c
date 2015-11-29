@@ -1,16 +1,21 @@
 #include <see_stack.h>
 #include <elf_parse.h>
 
+void				info_title(WINDOW *win, char *title)
+{
+	wattrset(win, A_BOLD);
+	wattron(win, COLOR_PAIR(3));
+	wprintw(win, "%s\n", title);
+	wattron(win, COLOR_PAIR(1));
+	wattroff(win, A_BOLD);
+}
+
 int					info_linkmap(t_term *s_term, char UN **av)
 {
 	struct link_map	*link_map;
 
 	link_map = s_term->slave.elf->link_map;
-	wattrset(s_term->slave.wins[WIN_SH], A_BOLD);
-	wattron(s_term->slave.wins[WIN_SH], COLOR_PAIR(3));
-	wprintw(s_term->slave.wins[WIN_SH], "\t\t---= Dynamic libraries =---\n");
-	wattron(s_term->slave.wins[WIN_SH], COLOR_PAIR(1));
-	wattroff(s_term->slave.wins[WIN_SH], A_BOLD);
+	info_title(s_term->slave.wins[WIN_SH], "\t\t---= Dynamic libraries =---");
 	if (link_map && (!link_map->l_name || !*link_map->l_name)
 		&& !link_map->l_addr)
 		link_map = link_map->l_next;
@@ -143,11 +148,7 @@ int					info_sym(Elf64_Sym **sym, WINDOW *win, char *strtab,
 
 int				info_dynsym(t_term *s_term, char UN **av)
 {
-	wattrset(s_term->slave.wins[WIN_SH], A_BOLD);
-	wattron(s_term->slave.wins[WIN_SH], COLOR_PAIR(3));
-	wprintw(s_term->slave.wins[WIN_SH], "\t\t\t---= Dynamic symbols =---\n");
-	wattron(s_term->slave.wins[WIN_SH], COLOR_PAIR(1));
-	wattroff(s_term->slave.wins[WIN_SH], A_BOLD);
+	info_title(s_term->slave.wins[WIN_SH], "\t\t---= Dynamic Symbols =---");
 	info_sym(s_term->slave.elf->dynsym, s_term->slave.wins[WIN_SH],
 			 s_term->slave.elf->dynstr, s_term->slave.elf->strsz);
 	return (0);
@@ -155,11 +156,7 @@ int				info_dynsym(t_term *s_term, char UN **av)
 
 int				info_symtab(t_term *s_term, char UN **av)
 {
-	wattrset(s_term->slave.wins[WIN_SH], A_BOLD);
-	wattron(s_term->slave.wins[WIN_SH], COLOR_PAIR(3));
-	wprintw(s_term->slave.wins[WIN_SH], "\t\t\t---= Symbols =---\n");
-	wattron(s_term->slave.wins[WIN_SH], COLOR_PAIR(1));
-	wattroff(s_term->slave.wins[WIN_SH], A_BOLD);
+	info_title(s_term->slave.wins[WIN_SH], "\t\t---= Symbols =---");
 	info_sym(s_term->slave.elf->symtab, s_term->slave.wins[WIN_SH],
 			 s_term->slave.elf->shstrtab, s_term->slave.elf->shstrsz);
 	return (0);
@@ -171,7 +168,7 @@ int				info_dyntab(t_term *s_term, char UN **av)
 	Elf64_Dyn	**dyn;
 	char		known;
 
-	waddstr(s_term->slave.wins[WIN_SH], ".dynamic:\n");
+	info_title(s_term->slave.wins[WIN_SH], "\t\t---= Dynamic Entries =---");
 	if (s_term->slave.elf)
 	{
 		dyn = s_term->slave.elf->dyn;
@@ -181,51 +178,123 @@ int				info_dyntab(t_term *s_term, char UN **av)
 			known = 1;
 			switch (dyn[i]->d_tag)
 			{
+			 case DT_NULL:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "NULL");
+				 break;
+			 case DT_NEEDED:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "NEEDED");
+				 break;
+			 case DT_PLTRELSZ:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "PLTRELSIZE");
+				 break;
 			 case DT_PLTGOT:
-				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", ".got.plt");
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "PLTGOT");
 				 break;
 			 case DT_HASH:
-				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", ".hash");
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "HASH");
 				 break;
 			 case DT_STRTAB:
-				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", ".dynstr");
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "STRTAB");
 				 break;
 			 case DT_SYMTAB:
-				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", ".dynsym");
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "SYMTAB");
 				 break;
 			 case DT_RELA:
-				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", ".rela");
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "RELA");
+				 break;
+			 case DT_RELASZ:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "RELASZ");
+				 break;
+			 case DT_RELAENT:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "RELAENT");
+				 break;
+			 case DT_STRSZ:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "STRSZ");
+				 break;
+			 case DT_SYMENT:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "SYMENT");
 				 break;
 			 case DT_INIT:
-				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", ".init");
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "INIT");
 				 break;
 			 case DT_FINI:
-				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", ".fini");
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "FINI");
+				 break;
+			 case DT_SONAME:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "SONAME");
+				 break;
+			 case DT_RPATH:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "RPATH");
+				 break;
+			 case DT_SYMBOLIC:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "SYMBOLIC");
 				 break;
 			 case DT_REL: 
-				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", ".rel");
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "REL");
 				 break;
-			 case DT_JMPREL:
-				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", ".plt");
+			 case DT_RELSZ:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "RELSZ");
 				 break;
-			 case DT_GNU_HASH:
-				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", ".gnu.hash");
+			 case DT_RELENT:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "RELENT");
 				 break;
-			 case DT_SYMINFO:
-				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", ".syminfo");
+			 case DT_PLTREL:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "PLTREL");
 				 break;
 			 case DT_DEBUG:
-				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", ".debug");
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "DEBUG");
+				 break;
+			 case DT_TEXTREL:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "TEXTREL");
+				 break;
+			 case DT_JMPREL:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "JMPREL");
+				 break;
+			 case DT_BIND_NOW:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "BIND_NOW");
+				 break;
+			 case DT_INIT_ARRAY:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "INIT_ARRAY");
+				 break;
+			 case DT_FINI_ARRAY:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "FINI_ARRAY");
+				 break;
+			 case DT_INIT_ARRAYSZ:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "INIT_ARRAYSZ");
+				 break;
+			 case DT_FINI_ARRAYSZ:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "FINI_ARRAYSZ");
+				 break;
+			 case DT_RUNPATH:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "RUNPATH");
+				 break;
+			 case DT_FLAGS:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "FLAGS");
+				 break;
+			 case DT_GNU_HASH:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "GNU_HASH");
+				 break;
+			 case DT_SYMINFO:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "SYMINFO");
+				 break;
+			 case DT_VERSYM:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "VERSYM");
+				 break;
+			 case DT_VERNEED:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "VERNEED");
+				 break;
+			 case DT_VERNEEDNUM:
+				 wprintw(s_term->slave.wins[WIN_SH], "\t%-15s", "VERNEEDNUM");
 				 break;
 			 default:
 				 known = 0;
 				 break;
 			}
 			if (known)
-				wprintw(s_term->slave.wins[WIN_SH], " @ %p\n",
+				wprintw(s_term->slave.wins[WIN_SH], " ::  %p\n",
 						dyn[i]->d_un.d_ptr);
 			else
-				wprintw(s_term->slave.wins[WIN_SH], "%x @ %p\n",
+				wprintw(s_term->slave.wins[WIN_SH], "\t%-15s @ %p\n", "UNKNOWN",
 						dyn[i]->d_tag, dyn[i]->d_un.d_ptr);
 			++i;
 		}
@@ -242,7 +311,7 @@ int			info_segment(t_term *s_term, char UN **av)
 
 	slave = &s_term->slave;
 	i = 0;
-	waddstr(slave->wins[WIN_SH], "segments: \n");
+	info_title(s_term->slave.wins[WIN_SH], "\t\t---= Segments =---");
 	if ((elf = slave->elf))
 	{
 		while (i < elf->e_hdr->e_phnum)
@@ -295,7 +364,7 @@ int			info_segment(t_term *s_term, char UN **av)
 				 wprintw(slave->wins[WIN_SH], "\t%-15s", "UNKNOWN");
 				 break;
 			}
-			wprintw(slave->wins[WIN_SH], "@ %p -> %p :: ",
+			wprintw(slave->wins[WIN_SH], "@     0x%012lx -> 0x%012lx    ::   ",
 					elf->p_hdr[i]->p_vaddr,
 					elf->p_hdr[i]->p_vaddr + elf->p_hdr[i]->p_memsz);
 			if (elf->p_hdr[i]->p_flags & 1)

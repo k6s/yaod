@@ -108,7 +108,7 @@ long						get_got_addr(pid_t pid, Elf64_Dyn **dyn);
  * error.
  */
 /* struct link_map			*get_linkmap(pid_t pid, Elf64_Ehdr *e_hdr); */
-struct link_map				*elf_linkmap(pid_t pid, Elf64_Dyn **dyn);
+struct link_map				*elf_linkmap(pid_t pid, Elf64_Dyn *got);
 
 /*!
  * \brief Get symtab, strtab and nchains from a dynamically loaded library.

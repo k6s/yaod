@@ -25,13 +25,8 @@ void							*get_data(pid_t pid, unsigned long addr,
 			/* if (errno && data[j - 1] == ~((unsigned)0)) */
 			if (errno)
 			{
-				perror("ptrace()");
-				if (j == 1)
-				{
-					free(data);
-					data = NULL;
-				}
-				return (data);
+				free(data);
+				return (NULL);
 			}
 			i += 8;
 		}

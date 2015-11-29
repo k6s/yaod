@@ -229,10 +229,19 @@ void					print_link_map(struct link_map *link_map)
 
 void			update_elf(t_slave *s_slave)
 {
+	size_t		i;
+
 	if (!s_slave->elf)
 		s_slave->elf = elf_get(s_slave->pid, s_slave->filename);
 	if (s_slave->elf && s_slave->elf->dyn && !(s_slave->elf->link_map))
-		s_slave->elf->link_map = elf_linkmap(s_slave->pid, s_slave->elf->dyn);
+	{
+		i = 0;
+		while (s_slave->elf->dyn[i] && s_slave->elf->dyn[i]->d_tag != DT_PLTGOT)
+			++i;
+		if (s_slave->elf->dyn[i])
+			s_slave->elf->link_map
+				= elf_linkmap(s_slave->pid, s_slave->elf->dyn[i]);
+	}
 	if (!s_slave->elf->linked)
 		elf_populate_dynsym(s_slave->pid, s_slave->elf->link_map,
 							s_slave->elf->dynsym, s_slave->elf->dynstr,
