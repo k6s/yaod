@@ -10,6 +10,48 @@
 #include <see_stack.h>
 #include <elf_parse.h>
 
+int					slave_exit(WINDOW *win, t_slave *slave)
+{
+	slave->end = 1;
+	slave->pid = -1;
+	sh_refresh(win, 0, 0);
+	return (SLAVE_EXIT);
+}
+
+int				slave_status(int status, WINDOW *win, t_slave *slave)
+{
+	if (WIFEXITED(status))
+	{
+		wprintw(win, "Slave exited with status %d\n", WEXITSTATUS(status));
+		return (slave_exit(win, slave));
+	}
+#ifdef WCOREDUMP
+	if (WCOREDUMP(status))
+	{
+		wprintw(win, "Slave quitted (core dumped)\n");
+		return (slave_exit(win, slave));
+	}
+#endif
+	/*
+	 * WIFSIGNALED is totally screwed up for some still obscure reasons.
+	 * WIFSTOPPED behaves strangely too. Need a PTRACE_GETSIG call to
+	 * handles signals properly.
+	 */
+	if (WIFSIGNALED(status) && WTERMSIG(status) != SIGURG)
+	{
+		wprintw(win, "Slave terminated by signal: %s\n",
+				strsignal(WTERMSIG(status)));
+		return (slave_exit(win, slave));
+	}
+	if (WIFSTOPPED(status) && WSTOPSIG(status) != SIGTRAP)
+		wprintw(win, "Slave stopped by signal %s\n",
+				strsignal(WSTOPSIG(status)));
+	else
+		return (SLAVE_BREAK);
+	sh_refresh(win, 0, 0);
+	return (0);
+}
+
 int                             ptrace_exec(char *path, char **cmd,
 											char **environ, int fds, int fdm)
 {
@@ -150,10 +192,10 @@ int								cont_slave(t_slave *slave)
 	if (ptrace(PTRACE_CONT, slave->pid, NULL, NULL))
 	{
 		waitpid(slave->pid, &status, 0);
-		return (status);
+		return (slave_status(status, slave->wins[WIN_SH], slave));
 	}
 	status = handle_pty(slave->fdm, slave->wins[WIN_SH], slave->pid);
-	return (status);
+	return (slave_status(status, slave->wins[WIN_SH], slave));
 }
 
 int								step_slave(t_slave *slave)
@@ -169,10 +211,10 @@ int								step_slave(t_slave *slave)
 	if (ptrace(PTRACE_SINGLESTEP, slave->pid, NULL, NULL))
 	{
 		waitpid(slave->pid, &status, 0);
-		return (status);
+		return (slave_status(status, slave->wins[WIN_SH], slave));
 	}
 	status = handle_pty(slave->fdm, slave->wins[WIN_SH], slave->pid);
-	return (status);
+	return (slave_status(status, slave->wins[WIN_SH], slave));
 }
 
 void					print_link_map(struct link_map *link_map)
@@ -186,7 +228,9 @@ void					print_link_map(struct link_map *link_map)
 
 char            refresh_exe_state(t_slave *s_slave, char sclean)
 {
-	if (!(s_slave->elf))
+	if (s_slave->pid > -1)
+	{
+	if (!s_slave->elf)
 		s_slave->elf = elf_get(s_slave->pid, s_slave->filename);
 	if (s_slave->elf && s_slave->elf->dyn && !(s_slave->elf->link_map))
 		s_slave->elf->link_map = elf_linkmap(s_slave->pid, s_slave->elf->dyn);
@@ -208,6 +252,7 @@ char            refresh_exe_state(t_slave *s_slave, char sclean)
 	wrefresh(s_slave->wins[WIN_REGS]);
 	sh_refresh(s_slave->wins[WIN_SH], 0, 0);
 	update_code(s_slave);
+	}
 	return (0);
 }
 
@@ -233,23 +278,31 @@ int				take_step(t_term *s_term, int (*exe_nxt)(t_slave * ))
 	if (WIFEXITED(status))
 		endwin();
 	sbp_restore(&s_term->slave);
-	return (status);
-
+	return (slave_status(status, s_term->slave.wins[WIN_SH], &s_term->slave));
 }
 
 int				step_prog(t_term *s_term, char UN **av)
 {
-	return (take_step(s_term, &step_slave));
+	if (s_term->slave.pid > -1)
+		return (take_step(s_term, &step_slave));
+	else
+		wprintw(s_term->slave.wins[WIN_SH], "No loaded executable.\n");
+	return (0);
 }
 
 int				cont_loop(t_term *s_term, char UN **av)
 {
 	int			status;
 
-	status = 222;
-	while (status == 222
-		   || (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP))
-		status = take_step(s_term, &step_slave);
+	status = 0;
+	if (s_term->slave.pid > -1)
+	{
+		status = 222;
+		while (status == 222 || status == SLAVE_BREAK)
+			status = take_step(s_term, &step_slave);
+	}
+	else
+		wprintw(s_term->slave.wins[WIN_SH], "No loaded executable.\n");
 	return (status);
 }
 
@@ -257,20 +310,37 @@ int				run_loop(t_term *s_term, char UN **av)
 {
 	int			status;
 
-	status = 222;
-	while (!(WIFEXITED(status)))
-		status = take_step(s_term, &step_slave);
+	status = 0;
+	if (s_term->slave.pid > -1)
+	{
+		status = 222;
+		while (status != SLAVE_EXIT)
+			status = take_step(s_term, &step_slave);
+	}
+	else
+		wprintw(s_term->slave.wins[WIN_SH], "No loaded executable.\n");
 	return (status);
 }
 
 int				blind_cont_prog(t_term *s_term, char UN **av)
 {
-	if (s_term->slave.d_sbp)
+	int			ret;
+
+	fprintf(stderr, "blind_cont\n");
+	if (s_term->slave.pid > -1)
 	{
-		step_slave(&s_term->slave);
-		sbp_restore(&s_term->slave);
+		if (s_term->slave.d_sbp)
+		{
+			if ((ret = step_slave(&s_term->slave)) == SLAVE_EXIT)
+				return (SLAVE_EXIT);
+			sbp_restore(&s_term->slave);
+		}
+		fprintf(stderr, "blind_cont return\n");
+		return (take_step(s_term, &cont_slave));
 	}
-	return (take_step(s_term, &cont_slave));
+	else
+		wprintw(s_term->slave.wins[WIN_SH], "No loaded executable.\n");
+	return (0);
 }
 
 int						open_pty(t_slave *s_slave)
@@ -322,6 +392,5 @@ int				start_slave(char *path, char **cmd, char **environ,
 	dump_regs_name(s_slave->wins[WIN_REGS]);
 	refresh_exe_state(s_slave, 1);
 	wrefresh(s_slave->wins[WIN_REGS]);
-	sleep(2);
-	return (status);
+	return (slave_status(status, s_slave->wins[WIN_SH], s_slave));
 }

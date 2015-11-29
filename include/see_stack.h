@@ -15,7 +15,7 @@
 # define _SEE_STACK_H
 
 # define _POSIX_SOURCE
-# define _XOPEN_SOURCE		600
+# define _XOPEN_SOURCE		700
 # define __USE_MISC
 
 # include <sys/mman.h>
@@ -143,7 +143,11 @@ struct							s_slave
 	t_sbp						*d_sbp;		/*!< @brief Disabled soft breakpoints */
 	int							fdm;		/*!< @brief Master side of PTY */
 	int							fds;		/*!< @brief Slave side of PTY */
+	int							end;
 };
+
+# define SLAVE_EXIT			42
+# define SLAVE_BREAK		23
 
 # define SBP_STEP			2
 # define SBP_CURRENT		1
