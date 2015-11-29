@@ -75,5 +75,6 @@ void		*my_memmove(void *dest, void *src, size_t len);
 void		*my_memalloc(size_t len);
 
 char		*my_getenv(char **environ, char *name);
+int			showmem(char *str, int size, char ascii);
 
 #endif /* !LIBMY_H_ */

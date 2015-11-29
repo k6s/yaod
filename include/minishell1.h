@@ -182,5 +182,8 @@ int			info_dyntab(t_term *s_term, char UN **av);
 int			info_linkmap(t_term *s_term, char UN **av);
 int			info_sections(t_term *s_term, char UN **av);
 int			help(t_term *s_term, char UN **av);
+int			print_xascii(t_term *s_term, char UN **av);
+int			print_xnoascii(t_term *s_term, char UN **av);
+int			print_val(t_term *s_term, char UN **av);
 
 #endif /* !MINISHELL1_H_ */
