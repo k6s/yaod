@@ -88,6 +88,7 @@ char				*elf_file_shstrtab(int fd, Elf64_Shdr **s_hdr, char *strtab,
 	i = 0 ;
 	while (s_hdr[i])
 	{
+		symname = NULL;
 		if (s_hdr[i]->sh_type == SHT_STRTAB
 			&& (symname = elf_symstr(strtab, s_hdr[i]->sh_name, sstrsz))
 			&& !strncmp(symname, ".strtab", 10))
