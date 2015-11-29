@@ -8,7 +8,7 @@
 ## Last update Tue Jan 20 19:03:41 2015 
 ##
 
-NAME	= dump_stack
+NAME	= yaod
 SRCS	= see_stack.c sh/main.c \
 				sh/get_next_line.c sh/get_next_line_2.c \
 				sh/builtins_tree.c sh/progs_tree.c \

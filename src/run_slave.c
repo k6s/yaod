@@ -153,7 +153,6 @@ int								handle_pty(int fdm, WINDOW *win, int pid)
 			}
 			if (r_len < 0)
 			{
-				perror("Err reading input");
 				waitpid(pid, &x, 0);
 				return (x);
 			}
@@ -171,7 +170,6 @@ int								handle_pty(int fdm, WINDOW *win, int pid)
 			fcntl(fdm, F_SETFL, y);
 			if (r_len < 0)
 			{
-				perror("Err reading slave's output");
 				waitpid(pid, &x, 0);
 				return (x);
 			}
@@ -256,7 +254,6 @@ char            refresh_exe_state(t_slave *s_slave, char sclean)
 		memcpy(&s_slave->old_regs, &s_slave->regs, sizeof(s_slave->old_regs));
 		if (ptrace(PTRACE_GETREGS, s_slave->pid, NULL, &s_slave->regs))
 		{
-			perror("ptrace() cannot get regs\n");
 			memcpy(&s_slave->regs, &s_slave->old_regs, sizeof(s_slave->regs));
 		/*	return (-1); */
 		}

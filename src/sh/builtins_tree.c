@@ -46,7 +46,7 @@ char			add_builtins(t_progs *progs)
 		return (-1);
 	if (add_builtin(progs, "s", &step_prog))
 		return (-1);
-	if (add_builtin(progs, "r", &run_loop) == -1)
+	if (add_builtin(progs, "c", &run_loop) == -1)
 		return (-1);
 	if (add_builtin(progs, "rb", &blind_cont_prog) == -1)
 		return (-1);
@@ -60,7 +60,7 @@ char			add_builtins(t_progs *progs)
 		return (-1);
 	if (add_builtin(progs, "bd", &sbp_delete) == -1)
 		return (-1);
-	if (add_builtin(progs, "im", &info_segment) == -1)
+	if (add_builtin(progs, "ip", &info_segment) == -1)
 		return (-1);
 	if (add_builtin(progs, "id", &info_dyntab) == -1)
 		return (-1);
@@ -71,6 +71,8 @@ char			add_builtins(t_progs *progs)
 	if (add_builtin(progs, "il", &info_linkmap) == -1)
 		return (-1);
 	if (add_builtin(progs, "ish", &info_sections) == -1)
+		return (-1);
+	if (add_builtin(progs, "h", &help) == -1)
 		return (-1);
 	return (0);
 }
