@@ -20,18 +20,6 @@ int					slave_exit(WINDOW *win, t_slave *slave)
 
 int				slave_status(int status, WINDOW *win, t_slave *slave)
 {
-	if (WIFEXITED(status))
-	{
-		wprintw(win, "Slave exited with status %d\n", WEXITSTATUS(status));
-		return (slave_exit(win, slave));
-	}
-#ifdef WCOREDUMP
-	if (WCOREDUMP(status))
-	{
-		wprintw(win, "Slave quitted (core dumped)\n");
-		return (slave_exit(win, slave));
-	}
-#endif
 	/*
 	 * WIFSIGNALED is totally screwed up for some still obscure reasons.
 	 * WIFSTOPPED behaves strangely too. Need a PTRACE_GETSIG call to
@@ -46,8 +34,20 @@ int				slave_status(int status, WINDOW *win, t_slave *slave)
 	if (WIFSTOPPED(status) && WSTOPSIG(status) != SIGTRAP)
 		wprintw(win, "Slave stopped by signal %s\n",
 				strsignal(WSTOPSIG(status)));
-	else
+	else if (WIFSTOPPED(status))
 		return (SLAVE_BREAK);
+	else if (WIFEXITED(status))
+	{
+		wprintw(win, "Slave exited with status %d\n", WEXITSTATUS(status));
+		return (slave_exit(win, slave));
+	}
+#ifdef WCOREDUMP
+	else if (WCOREDUMP(status))
+	{
+		wprintw(win, "Slave quitted (core dumped)\n");
+		return (slave_exit(win, slave));
+	}
+#endif
 	sh_refresh(win, 0, 0);
 	return (0);
 }
@@ -195,7 +195,8 @@ int								cont_slave(t_slave *slave)
 		return (slave_status(status, slave->wins[WIN_SH], slave));
 	}
 	status = handle_pty(slave->fdm, slave->wins[WIN_SH], slave->pid);
-	return (slave_status(status, slave->wins[WIN_SH], slave));
+	return (status);
+/*	return (slave_status(status, slave->wins[WIN_SH], slave)); */
 }
 
 int								step_slave(t_slave *slave)
@@ -214,7 +215,8 @@ int								step_slave(t_slave *slave)
 		return (slave_status(status, slave->wins[WIN_SH], slave));
 	}
 	status = handle_pty(slave->fdm, slave->wins[WIN_SH], slave->pid);
-	return (slave_status(status, slave->wins[WIN_SH], slave));
+	return (status);
+/*	return (slave_status(status, slave->wins[WIN_SH], slave)); */
 }
 
 void					print_link_map(struct link_map *link_map)
@@ -226,10 +228,8 @@ void					print_link_map(struct link_map *link_map)
 	}
 }
 
-char            refresh_exe_state(t_slave *s_slave, char sclean)
+void			update_elf(t_slave *s_slave)
 {
-	if (s_slave->pid > -1)
-	{
 	if (!s_slave->elf)
 		s_slave->elf = elf_get(s_slave->pid, s_slave->filename);
 	if (s_slave->elf && s_slave->elf->dyn && !(s_slave->elf->link_map))
@@ -238,20 +238,27 @@ char            refresh_exe_state(t_slave *s_slave, char sclean)
 		elf_populate_dynsym(s_slave->pid, s_slave->elf->link_map,
 							s_slave->elf->dynsym, s_slave->elf->dynstr,
 							s_slave->elf->strsz);
-	memcpy(&s_slave->old_regs, &s_slave->regs, sizeof(s_slave->old_regs));
-	if (ptrace(PTRACE_GETREGS, s_slave->pid, NULL, &s_slave->regs))
+}
+
+char            refresh_exe_state(t_slave *s_slave, char sclean)
+{
+	if (s_slave->pid > -1)
 	{
-		perror("ptrace() cannot get regs\n");
-		memcpy(&s_slave->regs, &s_slave->old_regs, sizeof(s_slave->regs));
+		update_elf(s_slave);
+		memcpy(&s_slave->old_regs, &s_slave->regs, sizeof(s_slave->old_regs));
+		if (ptrace(PTRACE_GETREGS, s_slave->pid, NULL, &s_slave->regs))
+		{
+			perror("ptrace() cannot get regs\n");
+			memcpy(&s_slave->regs, &s_slave->old_regs, sizeof(s_slave->regs));
 		/*	return (-1); */
-	}
-	dump_regs(&s_slave->old_regs, &s_slave->regs, s_slave->wins, 1);
-	wrefresh(s_slave->wins[WIN_REGS]);
-	dump_stack(s_slave->pid, &s_slave->old_regs, &s_slave->regs, s_slave->wins,
-			   sclean);
-	wrefresh(s_slave->wins[WIN_REGS]);
-	sh_refresh(s_slave->wins[WIN_SH], 0, 0);
-	update_code(s_slave);
+		}
+		dump_regs(&s_slave->old_regs, &s_slave->regs, s_slave->wins, 1);
+		wrefresh(s_slave->wins[WIN_REGS]);
+		dump_stack(s_slave->pid, &s_slave->old_regs, &s_slave->regs, s_slave->wins,
+				   sclean);
+		wrefresh(s_slave->wins[WIN_REGS]);
+		sh_refresh(s_slave->wins[WIN_SH], 0, 0);
+		update_code(s_slave);
 	}
 	return (0);
 }
@@ -324,14 +331,16 @@ int				run_loop(t_term *s_term, char UN **av)
 
 int				blind_cont_prog(t_term *s_term, char UN **av)
 {
-	int			ret;
+	int			status;
 
 	fprintf(stderr, "blind_cont\n");
 	if (s_term->slave.pid > -1)
 	{
 		if (s_term->slave.d_sbp)
 		{
-			if ((ret = step_slave(&s_term->slave)) == SLAVE_EXIT)
+			status = step_slave(&s_term->slave);
+			if (slave_status(status, s_term->slave.wins[WIN_SH],
+							 &s_term->slave) == SLAVE_EXIT)
 				return (SLAVE_EXIT);
 			sbp_restore(&s_term->slave);
 		}
