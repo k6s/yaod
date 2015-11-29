@@ -73,7 +73,6 @@ int                             ptrace_exec(char *path, char **cmd,
 			exit(EXIT_FAILURE);
 		}
 		execve(path, cmd, environ);
-		write(2, "Cannot execute command\n", 24);
 		exit(EXIT_FAILURE);
 	}
 	close(fds);
@@ -392,8 +391,21 @@ int				start_slave(char *path, char **cmd, char **environ,
 									s_slave->fdm)) < 0)
 		return (-1);
 	status = handle_pty(s_slave->fdm, s_slave->wins[WIN_SH], s_slave->pid);
-	wprintw(s_slave->wins[WIN_SH], "%s\n", ptsname(s_slave->fdm));
-	s_slave->elf = NULL;
+	if (!(s_slave->elf = elf_get(s_slave->pid, s_slave->filename)))
+	{
+		kill(s_slave->pid, SIGKILL);
+		status = waitpid(s_slave->pid, &status, 0);
+		s_slave->elf = NULL;
+		slave_exit(s_slave->wins[WIN_SH], s_slave);
+	}
+	if (WIFEXITED(status))
+	{
+		wmove(s_slave->wins[WIN_MAIN], 1, 3);
+		wprintw(s_slave->wins[WIN_MAIN], "%s won't be enslaved: can't execute it\n",
+				path);
+		wrefresh(s_slave->wins[WIN_MAIN]);
+		return (slave_exit(s_slave->wins[WIN_SH], s_slave));
+	}
 	s_slave->e_sbp = NULL;
 	s_slave->d_sbp = NULL;
 	bzero(&s_slave->regs, sizeof(s_slave->regs));
