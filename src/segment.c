@@ -153,6 +153,18 @@ int				info_dynsym(t_term *s_term, char UN **av)
 	return (0);
 }
 
+int				info_symtab(t_term *s_term, char UN **av)
+{
+	wattrset(s_term->slave.wins[WIN_SH], A_BOLD);
+	wattron(s_term->slave.wins[WIN_SH], COLOR_PAIR(3));
+	wprintw(s_term->slave.wins[WIN_SH], "\t\t\t---= Symbols =---\n");
+	wattron(s_term->slave.wins[WIN_SH], COLOR_PAIR(1));
+	wattroff(s_term->slave.wins[WIN_SH], A_BOLD);
+	info_sym(s_term->slave.elf->symtab, s_term->slave.wins[WIN_SH],
+			 s_term->slave.elf->shstrtab, s_term->slave.elf->shstrsz);
+	return (0);
+}
+
 int				info_dyntab(t_term *s_term, char UN **av)
 {
 	size_t		i;

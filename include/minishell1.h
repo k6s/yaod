@@ -177,6 +177,7 @@ int			blind_cont_prog(t_term *s_term, char UN **av);
 int			sbp_delete(t_term *s_term, char **av);
 int			info_segment(t_term *s_term, char UN **av);
 int			info_dynsym(t_term *s_term, char UN **av);
+int			info_symtab(t_term *s_term, char UN **av);
 int			info_dyntab(t_term *s_term, char UN **av);
 int			info_linkmap(t_term *s_term, char UN **av);
 int			info_sections(t_term *s_term, char UN **av);

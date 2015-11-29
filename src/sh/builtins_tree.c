@@ -66,9 +66,11 @@ char			add_builtins(t_progs *progs)
 		return (-1);
 	if (add_builtin(progs, "ids", &info_dynsym) == -1)
 		return (-1);
+	if (add_builtin(progs, "is", &info_symtab) == -1)
+		return (-1);
 	if (add_builtin(progs, "il", &info_linkmap) == -1)
 		return (-1);
-	if (add_builtin(progs, "is", &info_sections) == -1)
+	if (add_builtin(progs, "ish", &info_sections) == -1)
 		return (-1);
 	return (0);
 }

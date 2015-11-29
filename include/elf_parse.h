@@ -25,10 +25,13 @@ struct						s_elf
 	Elf64_Phdr				**p_hdr; /*!< @brief Elf program headers */
 	Elf64_Dyn				**dyn;
 	Elf64_Sym				**dynsym;
+	Elf64_Sym				**symtab;
 	char					*dynstr;
 	Elf64_Xword				strsz;
 	char					*strtab;
 	Elf64_Xword				sstrsz;
+	char					*shstrtab;
+	Elf64_Xword				shstrsz;
 	/* 
 	 * Not the original hash table value since hash table 'disapeared'.
 	 * DT_PLTRELSZ / sizeof(Elf64_Sym) + 1 (for 1st NULL dynsym entry)
