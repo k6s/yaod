@@ -22,6 +22,7 @@ int					help(t_term *s_term, char UN **av)
 	wprintw(win, "\til    - info link map\n");
 	wprintw(win, "\nPrint memory content:\n");
 	wprintw(win, "\tp 0xdeadbeff        - print value at 0xdeadbeef\n");
+	wprintw(win, "\tps 0xdeadbeef 123   - print 123 strings starting from 0xdeadbeef\n");
 	wprintw(win, "\tpx 0xdeadbeff 123   - print hexdump for content at\
 0xdeadbeef, 123 bytes length\n");
 	wprintw(win, "\tpxa 0xdeadbeff 123  - print hexdump and ascii for content\
