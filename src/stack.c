@@ -91,6 +91,24 @@ void										un_hl(WINDOW *win, unsigned *hl,
 	}
 }
 
+void							dump_new_frame(struct user_regs_struct *regs,
+                                 struct user_regs_struct *old_regs,
+                                 void *stack_frame, WINDOW **wins)
+{
+  wclear(wins[WIN_REGS]);
+  dump_regs_name(wins[WIN_REGS]);
+  if (old_regs)
+    dump_regs(old_regs, regs, wins, 1);
+  werase(wins[WIN_STACK]);
+  addr_prefix(regs->rbp, 0, regs->rbp - regs->rsp + 8, wins[WIN_STACK]);
+/*  dump_data((char *)stack_frame, (char *)((long)stack_frame + regs->rbp
+										  - regs->rsp + 8),
+            wins[WIN_STACK], 0, 0); */
+  update_var(wins[WIN_STACK], stack_frame, 0, regs->rbp - regs->rsp + 8, NULL, 1);
+  touchwin(wins[WIN_STACK]);
+  prefresh(wins[WIN_STACK], 0, 0, WIN_BORDER_LEN, WIN_BORDER_LEN, WIN_STACK_LI, 
+		   WIN_STACK_CO);
+}
 void		update_stack_window(WINDOW **wins, struct user_regs_struct *regs,
 								struct user_regs_struct *old_regs,
 								void *stack_frame, void *old_stack_frame,

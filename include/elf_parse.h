@@ -62,6 +62,9 @@ void					elf_free_sym(Elf64_Sym **sym);
 void					elf_free_dyn(Elf64_Dyn **dyn);
 int						elf_free(t_elf *elf);
 
+ssize_t					elf_from_file(char *filename, t_elf *elf);
+t_elf					*elf_from_process(pid_t pid, t_elf *elf);
+
 /*!
  * \brief Get process Elf64 Elf Header.
  * \param pid Process ID.

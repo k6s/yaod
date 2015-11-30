@@ -9,7 +9,7 @@
 ##
 
 NAME	= yaod
-SRCS	= see_stack.c sh/main.c \
+SRCS	= 		sh/main.c \
 				sh/get_next_line.c sh/get_next_line_2.c \
 				sh/builtins_tree.c sh/progs_tree.c \
 				sh/env_builtins.c sh/my_exit.c sh/my_cd.c \
@@ -25,13 +25,15 @@ SRCS	= see_stack.c sh/main.c \
 				curses.c \
 				output.c \
 				update_slave_state.c \
-				get_slave_data.c \
+				ptrace_get.c \
 				stack.c \
 				regs.c \
 				color_output.c \
 				run_slave.c \
 				bp.c \
 				elf_parse.c \
+				elf_file.c \
+				elf_process.c \
 				segment.c \
 				code.c \
 				print_mem.c \

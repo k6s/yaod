@@ -420,3 +420,18 @@ int				start_slave(char *path, char **cmd, char **environ,
 	wrefresh(s_slave->wins[WIN_REGS]);
 	return (slave_status(status, s_slave->wins[WIN_SH], s_slave));
 }
+
+WINDOW          **dump_stack_start(int argc, char **argv, char **environ,
+								   t_slave *s_slave)
+{
+	if (argc > 1)
+	{
+		if ((s_slave->wins = curses_init()))
+		{
+			s_slave->filename = argv[1];
+			start_slave(argv[1], argv + 1, environ, s_slave);
+		}
+		return (s_slave->wins);
+	}
+	return (NULL);
+}
