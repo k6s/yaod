@@ -24,7 +24,6 @@ SRCS	= 		sh/main.c \
 				sh/my_getpid.c \
 				curses.c \
 				output.c \
-				update_slave_state.c \
 				ptrace_get.c \
 				stack.c \
 				regs.c \
@@ -34,10 +33,10 @@ SRCS	= 		sh/main.c \
 				elf_parse.c \
 				elf_file.c \
 				elf_process.c \
-				segment.c \
 				code.c \
 				print_mem.c \
-				showmem.c
+				showmem.c \
+				infos.c
 OBJS	= $(addprefix obj/, $(SRCS:.c=.o))
 CFLAGS	+= -Wall -Wextra -ansi -lcurses -ggdb -std=gnu11
 LDFLAGS	+= -L lib/ -lmy -l capstone -lm
