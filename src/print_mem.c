@@ -4,7 +4,7 @@ int				print_xascii(t_term *s_term, char UN **av)
 {
 	long		addr;
 	long		len;
-	char		*data;
+	u_char		*data;
 	WINDOW		*win;
 
 	win = s_term->slave.wins[WIN_SH];
@@ -28,7 +28,7 @@ int				print_xnoascii(t_term *s_term, char UN **av)
 {
 	long		addr;
 	long		len;
-	char		*data;
+	u_char		*data;
 	WINDOW		*win;
 
 	win = s_term->slave.wins[WIN_SH];
@@ -52,7 +52,7 @@ int				print_val(t_term *s_term, char UN **av)
 {
 	long		addr;
 	long		len;
-	char		*data;
+	u_char		*data;
 	WINDOW		*win;
 
 	win = s_term->slave.wins[WIN_SH];
@@ -69,13 +69,13 @@ int				print_val(t_term *s_term, char UN **av)
 	return (0);
 }
 
-int				print_str(t_term *s_term, char UN **av)
+int						print_str(t_term *s_term, char UN **av)
 {
-	long		addr;
-	long		len;
-	char		*data;
-	WINDOW		*win;
-	size_t		i;
+	long				addr;
+	unsigned long		len;
+	u_char				*data;
+	WINDOW				*win;
+	size_t				i;
 
 	win = s_term->slave.wins[WIN_SH];
 	if (av[1])
@@ -95,7 +95,7 @@ int				print_str(t_term *s_term, char UN **av)
 			}
 			else
 				wprintw(win, "    %012lx: \"%s\"\n", addr, data);
-			addr += strlen(data) + 1;
+			addr += strlen((char *)data) + 1;
 			++i;
 			free(data);
 		}

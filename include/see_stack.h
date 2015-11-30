@@ -14,8 +14,9 @@
 #ifndef _SEE_STACK_H
 # define _SEE_STACK_H
 
-# define _POSIX_SOURCE
-# define _XOPEN_SOURCE		700
+# define _XOPEN_SOURCE		600
+# define _POSIX_C_SOURCE	200809L
+# define _DEFAULT_SOURCE
 # define __USE_MISC
 
 # include <sys/mman.h>
@@ -126,7 +127,6 @@ enum					e_regum
 	E_FS,
 	E_GS
 };
-
 
 /*!
  * @brief Informations and memory content of a process.
@@ -254,6 +254,8 @@ void			my_perror(char *prog_name, char *msg);
 void			out_refresh(WINDOW *win, int py, int px);
 void			code_refresh(WINDOW *win, int py, int px);
 void			sh_refresh(WINDOW *win, int py, int px);
+int				showmem(WINDOW *win, unsigned char *str, int size, long base,
+						char ascii);
 
 /*
  * color_output.c

@@ -30,7 +30,7 @@ Elf64_Shdr				**elf_file_shdr(int fd, Elf64_Ehdr *e_hdr)
 		return (NULL);
 	if (!(s_hdr = malloc(sizeof(*s_hdr) * (e_hdr->e_shnum + 1))))
 		return (NULL);
-	bzero(s_hdr, sizeof(*s_hdr) * (e_hdr->e_shnum + 1));
+	memset(s_hdr, 0, sizeof(*s_hdr) * (e_hdr->e_shnum + 1));
 	while (i < e_hdr->e_shnum)
 	{
 		if (!(s_hdr[i] = malloc(sizeof(**s_hdr))))
@@ -64,7 +64,7 @@ Elf64_Sym			**elf_file_symtab(int fd, Elf64_Shdr **s_hdr)
 		if (!(sym = malloc(sizeof(*sym) * (entnum + 1))))
 			return (NULL);
 		j = 0;
-		bzero(sym, sizeof(*sym) * (entnum + 1));
+		memset(sym, 0, sizeof(*sym) * (entnum + 1));
 		while (j < entnum)
 		{
 			if (!(sym[j] = malloc(sizeof(**sym))))
@@ -108,7 +108,7 @@ char				*elf_file_shstrtab(int fd, Elf64_Shdr **s_hdr, char *strtab,
 			return (NULL);
 		if (lseek(fd, s_hdr[i]->sh_offset, SEEK_SET) == -1)
 			return (NULL);
-		if (read(fd, shstrtab, *size) != *size)
+		if (read(fd, shstrtab, *size) != (ssize_t)*size)
 		{
 			free(shstrtab);
 			return (NULL);
@@ -249,7 +249,7 @@ Elf64_Dyn				**elf_dyn(pid_t pid, Elf64_Phdr *p_hdr)
 	if (!(dyn = malloc(sizeof(*dyn) * (max + 1))))
 		return (NULL);
 	dtag = 1;
-	bzero(dyn, sizeof(*dyn) * (max + 1));
+	memset(dyn, 0, sizeof(*dyn) * (max + 1));
 	while (dtag && i < max)
 	{
 		if (!(dyn[i] = get_data(pid, p_hdr->p_vaddr + i * sizeof(Elf64_Dyn),
@@ -360,7 +360,7 @@ Elf64_Sym				**elf_dynsym(pid_t pid, Elf64_Dyn **dynsym,
 		return (NULL);
 	if (!(sym = malloc(sizeof(*sym) * (nchains + 1))))
 		return (NULL);
-	bzero(sym, sizeof(*sym) * (nchains + 1));
+	memset(sym, 0, sizeof(*sym) * (nchains + 1));
 	*linked = 0;
 	j = 0;
 	while (j < nchains && (sym[j] = elf_sym(pid, dynsym[i], j)))
@@ -460,7 +460,7 @@ t_elf					*elf_get(pid_t pid, char *filename)
 
 	if (!(elf = malloc(sizeof(*elf))))
 		return (NULL);
-	bzero(elf, sizeof(*elf));
+	memset(elf, 0, sizeof(*elf));
 	if ((elf->e_hdr = elf_ehdr(pid)))
 	{
 		if (elf_x64_valid(elf->e_hdr))
@@ -514,7 +514,7 @@ struct link_map				*elf_linkmap(pid_t pid, Elf64_Dyn *got)
 	l = link_map;
 	while (link_map)
 	{
-		link_map->l_name = get_str(pid, (long)link_map->l_name);
+		link_map->l_name = (char *)get_str(pid, (long)link_map->l_name);
 		if (link_map->l_next)
 			link_map->l_next = get_data(pid, (long)link_map->l_next,
 										sizeof(*link_map));
@@ -537,7 +537,7 @@ t_tables_addr				*elf_tables(pid_t pid, struct link_map *link_map)
 
 	if (!(tables = malloc(sizeof(*tables))))
 		return (NULL);
-	bzero(tables, sizeof(*tables));
+	memset(tables, 0, sizeof(*tables));
 	addr = (unsigned long)link_map->l_ld;
 	if ((dyn = get_data(pid, addr, sizeof(*dyn))))
 	{
@@ -563,11 +563,11 @@ t_tables_addr				*elf_tables(pid_t pid, struct link_map *link_map)
 	return (tables);
 }
 
-char					*elf_addr_dynsym(pid_t pid, struct link_map *link_map,
-										 t_tables_addr *s_tables, unsigned long sym_addr)
+u_char			*elf_addr_dynsym(pid_t pid, struct link_map *link_map,
+						 t_tables_addr *s_tables, unsigned long sym_addr)
 {
-	size_t				i;
-	Elf64_Sym			*sym;
+	size_t		i;
+	Elf64_Sym	*sym;
 
 	i = 0;
 	if (s_tables->nchains)
@@ -595,7 +595,7 @@ long					elf_dynsym_addr(pid_t pid, struct link_map *link_map,
 	size_t				i;
 	Elf64_Sym			*sym;
 	long				ret;
-	char				*s;
+	u_char				*s;
 
 	i = 0;
 	ret = 0;
@@ -608,7 +608,7 @@ long					elf_dynsym_addr(pid_t pid, struct link_map *link_map,
 				return (0);
 			if ((s = get_str(pid, (long)s_tables->strtab + sym->st_name)))
 			{
-				if (!strcmp(symbol, s))
+				if (!strcmp(symbol, (char *)s))
 					ret = link_map->l_addr + sym->st_value;
 			}
 			free(sym);

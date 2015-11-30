@@ -9,9 +9,9 @@
 */
 #include <see_stack.h>
 
-void			dump_regs_name(WINDOW *win)
+void							dump_regs_name(WINDOW *win)
 {
-  size_t		idx;
+  size_t						idx;
   struct user_regs_struct		regs;
   const char					regs_name[][3] = {"r15", "r14", "r13", "r12", 
     "rbp", "rbx", "r11",
@@ -47,8 +47,8 @@ static void		restore_regs_color(WINDOW *win, size_t *regs_hl)
 }
 
 void							dump_regs(struct user_regs_struct *old_regs,
-                            struct user_regs_struct *regs,
-                            WINDOW **wins, char refresh)
+										  struct user_regs_struct *regs,
+										  WINDOW **wins, char refresh)
 {
   size_t						idx;
   size_t						regs_hl[30];
@@ -58,14 +58,13 @@ void							dump_regs(struct user_regs_struct *old_regs,
   win = wins[WIN_REGS];
   idx = 0;
   regs_idx = 0;
-  bzero(regs_hl, 30 * sizeof(*regs_hl));
+  memset(regs_hl, 0, 30 * sizeof(*regs_hl));
   while (idx < sizeof(*regs) && idx < 30 * sizeof(regs->r15))
   {
     if ((long)(*((char *)regs + idx)) != (long)(*((char *)old_regs + idx)))
     {
       addrhl(win, 8, 6, idx / sizeof(regs->r15), (char *)regs + idx);
       regs_hl[regs_idx++] = idx / sizeof(regs->r15);
-	  
     }
     else if (refresh)
       print_addr(win, 8, 6, idx / sizeof(regs->r15), (char *)regs + idx, 0);

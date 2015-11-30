@@ -222,7 +222,7 @@ int							new_sbp(t_term *s_term, char **av)
 		s_slave = &s_term->slave;
 		if (!(sbp = malloc(sizeof(*sbp))))
 			return (-1);
-		bzero(sbp, sizeof(*sbp));
+		memset(sbp, 0, sizeof(*sbp));
 		if ((sbp->addr = strtol(av[1], NULL, 16)) != LONG_MAX)
 		{
 			if ((ret = sbp_enable(s_slave, sbp)))

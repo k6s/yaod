@@ -115,8 +115,7 @@ int								handle_pty(int fdm, WINDOW *win, int pid)
 	x = 0;
 	while (!x)
 	{
-		bzero(&tv, sizeof(tv));
-		tv.tv_sec = 0;
+		memset(&tv, 0, sizeof(tv));
 		tv.tv_usec = 10;
 		FD_ZERO(&fd_in);
 		FD_SET(fdm, &fd_in);
@@ -414,8 +413,8 @@ int				start_slave(char *path, char **cmd, char **environ,
 	}
 	s_slave->e_sbp = NULL;
 	s_slave->d_sbp = NULL;
-	bzero(&s_slave->regs, sizeof(s_slave->regs));
-	bzero(&s_slave->old_regs, sizeof(s_slave->old_regs));
+	memset(&s_slave->regs, 0, sizeof(s_slave->regs));
+	memset(&s_slave->old_regs, 0, sizeof(s_slave->old_regs));
 	dump_regs_name(s_slave->wins[WIN_REGS]);
 	refresh_exe_state(s_slave, 1);
 	wrefresh(s_slave->wins[WIN_REGS]);

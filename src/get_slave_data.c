@@ -3,9 +3,7 @@
  * @brief Get slave process memory content.
  * @author K6
  */
-#include <see_stack.h>
-#include <errno.h>
-#include <elf.h>
+#include <ptrace_get.h>
 
 void							*get_data(pid_t pid, unsigned long addr,
 										  size_t len)
@@ -34,9 +32,9 @@ void							*get_data(pid_t pid, unsigned long addr,
 	return (data);
 }
 
-char							*get_str(pid_t pid, long addr)
+u_char							*get_str(pid_t pid, unsigned long addr)
 {
-	char						*s;
+	u_char						*s;
 	long						*word;
 	size_t						i;
 
@@ -49,7 +47,7 @@ char							*get_str(pid_t pid, long addr)
 			return (NULL);
 		if (!(word = get_data(pid, addr + i, sizeof(*word))))
 			return (NULL);
-		strncpy(s + i, (const char *)word, sizeof(*word));
+		strncpy((char *)(s + i), (const char *)word, sizeof(*word));
 		i += sizeof(*word);
 	}
 	return (s);
@@ -63,7 +61,7 @@ void							*get_rev_data(pid_t pid, long rbp, long rsp)
 	if ((data = malloc(rbp - rsp + 32)))
 	{
 		idx = 0;
-		bzero(data, rbp - rsp + 32);
+		memset(data, 0, rbp - rsp + 32);
 		while ((off_t)(rbp - idx) >= rsp)
 		{
 			data[idx / sizeof(long)] = ptrace(PTRACE_PEEKTEXT, pid,

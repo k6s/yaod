@@ -23,11 +23,11 @@ SRCS	= see_stack.c sh/main.c \
 				sh/sh_key.c \
 				sh/my_getpid.c \
 				curses.c \
+				output.c \
 				update_slave_state.c \
 				get_slave_data.c \
 				stack.c \
 				regs.c \
-				output.c \
 				color_output.c \
 				run_slave.c \
 				bp.c \
