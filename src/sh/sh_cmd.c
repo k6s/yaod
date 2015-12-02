@@ -142,6 +142,7 @@ int			shell_readloop(t_term *s_term, WINDOW **wins)
 	my_bzero((void *)&s_line, sizeof(s_line));
 	s_line.hist = NULL;
 	bzero(c, 4);
+	wmove(s_term->slave.wins[WIN_SH], 0, 0);
 	while (!s_term->end && s_term->c_win == WIN_SH)
 	{
 		if (!next_line(wins[WIN_SH], &s_line, &s_buff))

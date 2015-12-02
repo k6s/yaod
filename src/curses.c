@@ -54,12 +54,12 @@ static WINDOW			**get_wins(void)
 		return (NULL);
 	if (!(wins[WIN_SH] = newpad(WIN_SH_LI, WIN_SH_CO)))
 		return (NULL);
-	wins[WIN_OSH] = subpad(wins[WIN_SH], WIN_SH_LI, WIN_SH_CO, WIN_SH_OY,
-						   WIN_SH_OX);
+/*	wins[WIN_OSH] = subpad(wins[WIN_SH], WIN_SH_LI, WIN_SH_CO, WIN_SH_OY,
+						   WIN_SH_OX); */
 	if (!(wins[WIN_CODE] = newpad(WIN_CODE_LI, WIN_CODE_CO)))
 		return (NULL);
-	wins[WIN_OCODE] = subpad(wins[WIN_CODE], WIN_CODE_LI, WIN_CODE_CO,
-							 WIN_CODE_OY, WIN_CODE_OX);
+/*	wins[WIN_OCODE] = subpad(wins[WIN_CODE], WIN_CODE_LI, WIN_CODE_CO,
+							 WIN_CODE_OY, WIN_CODE_OX); */
 	tcgetattr(0, &term);
 	term.c_cc[VINTR] = 0;
 	term.c_cc[VEOF] = 0;

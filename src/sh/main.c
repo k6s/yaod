@@ -80,7 +80,7 @@ int			main(int argc, char **argv, char **environ)
 		my_bzero((void *)(&s_term), sizeof(s_term));
 		if (!(wins = dump_stack_start(argc, argv, environ, &s_term.slave)))
 			return (-1);
-		welcome_user(wins[WIN_MAIN]);
+/*		welcome_user(wins[WIN_MAIN]); */
 		wmove(s_term.slave.wins[WIN_SH], 0, 0);
 		s_term.c_win = WIN_SH;
 		if (init_mysh(&s_term, environ))

@@ -85,9 +85,9 @@ enum			e_win_offset
 # define WIN_REGS_LI	27				/*! @brief registry window lines */
 
 # define WIN_SH_OX		WIN_BORDER_LEN
-# define WIN_SH_OY		WIN_STACK_LI + WIN_BORDER_LEN * 2
+# define WIN_SH_OY		WIN_STACK_LI + WIN_BORDER_LEN * 3
 # define WIN_SH_CO		84				/*! @brief shell window columns */
-# define WIN_SH_LI		35				/*! @brief shell window lines */
+# define WIN_SH_LI		15				/*! @brief shell window lines */
 
 # define WIN_CODE_OX	WIN_BORDER_LEN * 3 + WIN_STACK_CO + WIN_REGS_CO
 # define WIN_CODE_OY	WIN_BORDER_LEN
