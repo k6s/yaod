@@ -11,7 +11,7 @@
 # define HBP_ACCESS_EXEC		0b00
 # define HBP_ACCESS_WRITE		0b01
 # define HBP_ACCESS_ANY			0b10
-# define HBP_ACCESS_RDWR		0b11
+# define HBP_ACCESS_MEM			0b11
 
 # define HBP_LEN_1				0b00
 # define HBP_LEN_2				0b01
@@ -38,16 +38,20 @@
 
 typedef struct		s_hbp
 {
-	long			addr;
+	unsigned long	addr;
 	unsigned char	access;
 	unsigned char	len;
 	unsigned char	scope;
 	unsigned char	regnum;
 	struct s_hbp	*nxt;
+	struct s_hbp	*prv;
+	int				id;
+	char			current;
 } t_hbp;
 
 int					hbp_set(pid_t pid, t_hbp *hbp);
 int					hbp_unset(pid_t pid, t_hbp *hbp);
+void				hbp_append(t_hbp **r, t_hbp *n, char inc);
+void				hbp_remove(t_hbp **r, t_hbp *hbp);
 
 #endif
-

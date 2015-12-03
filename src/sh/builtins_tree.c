@@ -60,6 +60,8 @@ char			add_builtins(t_progs *progs)
 		return (-1);
 	if (add_builtin(progs, "bd", &sbp_delete) == -1)
 		return (-1);
+	if (add_builtin(progs, "hb", &new_hbp) == -1)
+		return (-1);
 	if (add_builtin(progs, "ip", &info_segment) == -1)
 		return (-1);
 	if (add_builtin(progs, "id", &info_dyntab) == -1)

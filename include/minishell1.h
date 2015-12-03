@@ -186,5 +186,6 @@ int			print_xascii(t_term *s_term, char UN **av);
 int			print_xnoascii(t_term *s_term, char UN **av);
 int			print_val(t_term *s_term, char UN **av);
 int			print_str(t_term *s_term, char UN **av);
+int			new_hbp(t_term *s_term, char **av);
 
 #endif /* !MINISHELL1_H_ */

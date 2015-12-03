@@ -39,6 +39,7 @@
 # include <elf_parse.h>
 # include <ptrace_get.h>
 # include <capstone/capstone.h>
+# include <hbp.h>
 
 typedef struct s_buff	t_buff;		/*! @brief typedef to @ref s_buff */
 typedef struct s_prog	t_prog;		/*! @brief typedef to @ref s_prog */
@@ -85,8 +86,8 @@ enum			e_win_offset
 # define WIN_REGS_LI	27				/*! @brief registry window lines */
 
 # define WIN_SH_OX		WIN_BORDER_LEN
-# define WIN_SH_OY		WIN_STACK_LI + WIN_BORDER_LEN * 3
-# define WIN_SH_CO		84				/*! @brief shell window columns */
+# define WIN_SH_OY		WIN_STACK_LI + WIN_BORDER_LEN * 2
+# define WIN_SH_CO		70				/*! @brief shell window columns */
 # define WIN_SH_LI		15				/*! @brief shell window lines */
 
 # define WIN_CODE_OX	WIN_BORDER_LEN * 3 + WIN_STACK_CO + WIN_REGS_CO
@@ -141,6 +142,8 @@ struct							s_slave
 	WINDOW						**wins;		/*!< @brief Windows curses id */
 	t_sbp						*e_sbp;		/*!< @brief Enabled soft breakpoints */
 	t_sbp						*d_sbp;		/*!< @brief Disabled soft breakpoints */
+	t_hbp						*e_hbp;
+	t_hbp						*d_hbp;
 	int							fdm;		/*!< @brief Master side of PTY */
 	int							fds;		/*!< @brief Slave side of PTY */
 	int							end;
@@ -149,8 +152,8 @@ struct							s_slave
 # define SLAVE_EXIT			42
 # define SLAVE_BREAK		23
 
-# define SBP_STEP			2
-# define SBP_CURRENT		1
+# define BP_STEP			2
+# define BP_CURRENT			1
 
 /*!
  * @brief Software breakpoint.
@@ -169,6 +172,9 @@ int							sbp_disable(t_slave *s_slave, t_sbp *sbp);
 int							sbp_enable(t_slave *s_slave, t_sbp *sbp);
 int							sbp_restore(t_slave *s_slave);
 void						sbp_append(t_sbp **r, t_sbp *n, char inc);
+
+int							hbp_disable(t_slave *s_slave, t_hbp *hbp);
+int							hbp_enable(t_slave *s_slave, t_hbp *hbp);
 
 /*
  ** GENERAL TERM STRUCT

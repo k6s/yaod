@@ -192,7 +192,6 @@ int								cont_slave(t_slave *slave)
 	}
 	status = handle_pty(slave->fdm, slave->wins[WIN_SH], slave->pid);
 	return (status);
-/*	return (slave_status(status, slave->wins[WIN_SH], slave)); */
 }
 
 int								step_slave(t_slave *slave)
@@ -203,7 +202,7 @@ int								step_slave(t_slave *slave)
 	if (!(sbp = malloc(sizeof(*sbp))))
 		return (-1);
 	sbp->addr = slave->regs.rip;
-	sbp->current = SBP_STEP;
+	sbp->current = BP_STEP;
 	sbp_append(&slave->e_sbp, sbp, 1);
 	if (ptrace(PTRACE_SINGLESTEP, slave->pid, NULL, NULL))
 	{
@@ -212,7 +211,6 @@ int								step_slave(t_slave *slave)
 	}
 	status = handle_pty(slave->fdm, slave->wins[WIN_SH], slave->pid);
 	return (status);
-/*	return (slave_status(status, slave->wins[WIN_SH], slave)); */
 }
 
 void					print_link_map(struct link_map *link_map)
@@ -337,10 +335,9 @@ int				blind_cont_prog(t_term *s_term, char UN **av)
 {
 	int			status;
 
-	fprintf(stderr, "blind_cont\n");
 	if (s_term->slave.pid > -1)
 	{
-		if (s_term->slave.d_sbp)
+		if (s_term->slave.d_sbp || s_term->slave.d_hbp)
 		{
 			status = step_slave(&s_term->slave);
 			if (slave_status(status, s_term->slave.wins[WIN_SH],
@@ -348,7 +345,6 @@ int				blind_cont_prog(t_term *s_term, char UN **av)
 				return (SLAVE_EXIT);
 			sbp_restore(&s_term->slave);
 		}
-		fprintf(stderr, "blind_cont return\n");
 		return (take_step(s_term, &cont_slave));
 	}
 	else

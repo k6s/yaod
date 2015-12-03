@@ -1,6 +1,51 @@
 #include <hbp.h>
 
-int					set_debug_register(pid_t pid, int regnum, int val)
+void						hbp_remove(t_hbp **r, t_hbp *hbp)
+{
+	t_hbp					*prv;
+
+	if (*r)
+	{
+		if (*r == hbp)
+			*r = (*r)->nxt;
+		else
+		{
+			prv = *r;
+			while (prv && prv->nxt != hbp)
+				prv = prv->nxt;
+			if (prv)
+			{
+				prv->nxt = hbp->nxt;
+				if (hbp->nxt)
+					hbp->nxt->prv = prv;
+			}
+		}
+	}
+	hbp->nxt = NULL;
+	hbp->prv = NULL;
+}
+
+void						hbp_append(t_hbp **r, t_hbp *n, char inc)
+{
+	t_hbp					*hbp;
+
+	n->nxt = NULL;
+	if ((hbp = *r))
+	{
+		while (hbp->nxt)
+			hbp = hbp->nxt;
+		hbp->nxt = n;
+		n->prv = hbp;
+		n->id = hbp->id + inc;
+	}
+	else
+	{
+		*r = n;
+		n->id = inc;
+	}
+}
+
+int					set_debug_register(pid_t pid, int regnum, long val)
 {
 	errno = 0;
 	ptrace(PTRACE_POKEUSER, pid, offsetof(struct user, u_debugreg)
@@ -29,12 +74,11 @@ int							hbp_set(pid_t pid, t_hbp *hbp)
 	errno = 0;
 	dr7 = get_debug_register(pid, 7);
 	dr7 |= HBP_SET_DR7(hbp->regnum, hbp->scope, hbp->access, hbp->len);
-	printf("setting dr7 to: %x\n", dr7);
 	set_debug_register(pid, 7, dr7);
 	set_debug_register(pid, 6, 0);
 	set_debug_register(pid, hbp->regnum, hbp->addr);
 	dr7 = get_debug_register(pid, 7);
-	printf("dr7 is %x and dr%d is %x\n", dr7, hbp->regnum, hbp->addr);
+	return (errno);
 }
 
 int							hbp_unset(int pid, t_hbp *hbp)
@@ -47,4 +91,5 @@ int							hbp_unset(int pid, t_hbp *hbp)
 		return (-1);
 	dr7 &= ~(HBP_SET_DR7(hbp->regnum, hbp->scope, hbp->access, hbp->len));
 	set_debug_register(pid, 7, dr7);
+	return (errno);
 }

@@ -36,7 +36,8 @@ SRCS	= 		sh/main.c \
 				code.c \
 				print_mem.c \
 				showmem.c \
-				infos.c
+				infos.c \
+				hbp.c
 OBJS	= $(addprefix obj/, $(SRCS:.c=.o))
 CFLAGS	+= -Wall -Wextra -ansi -lcurses -ggdb -std=gnu11
 LDFLAGS	+= -L lib/ -lmy -l capstone -lm -ldl

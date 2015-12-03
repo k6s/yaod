@@ -63,7 +63,7 @@ int							sbp_disable(t_slave *s_slave, t_sbp *sbp)
 	ptrace(PTRACE_POKETEXT, s_slave->pid, (void *)sbp->addr,
 		   (void *)sbp->saved, 0);
 	sbp_remove(&s_slave->e_sbp, sbp);
-	if (sbp->current != SBP_STEP)
+	if (sbp->current != BP_STEP)
 		sbp_append(&s_slave->d_sbp, sbp, -1);
 	else
 		free(sbp);
@@ -83,13 +83,33 @@ int							sbp_enable(t_slave *s_slave, t_sbp *sbp)
 	return (0);
 }
 
+int							hbp_disable(t_slave *s_slave, t_hbp *hbp)
+{
+	int						ret;
+
+	ret = hbp_unset(s_slave->pid, hbp);
+	hbp_remove(&s_slave->e_hbp, hbp);	
+	hbp_append(&s_slave->d_hbp, hbp, -1);
+	return (0);
+}
+
+int							hbp_enable(t_slave *s_slave, t_hbp *hbp)
+{
+	int						ret;
+
+	ret = hbp_set(s_slave->pid, hbp);
+	hbp_remove(&s_slave->d_hbp, hbp);
+	hbp_append(&s_slave->e_hbp, hbp, 1);
+	return (ret);
+}
+
 t_sbp						*sbp_hdl_step(t_slave *s_slave)
 {
 	t_sbp					*sbp;
 
 	sbp = s_slave->e_sbp;
 	while (sbp && (sbp->addr != s_slave->old_regs.rip
-				   || sbp->current != SBP_STEP))
+				   || sbp->current != BP_STEP))
 		sbp = sbp->nxt;
 	if (sbp)
 	{
@@ -108,12 +128,29 @@ t_sbp						*sbp_hdl_step(t_slave *s_slave)
 	return (NULL);
 }
 
+int							hbp_hdl(t_slave *slave, t_hbp *hbp)
+{
+	while (hbp && hbp->addr != slave->regs.rip)
+		hbp = hbp->nxt;
+	if (hbp && !hbp->current)
+	{
+		hbp->current = BP_CURRENT;
+		hbp_disable(slave, hbp);
+		wprintw(slave->wins[WIN_SH], "\t[+] Interrupt by user set watchpoint @ %p\n",
+				hbp->addr);
+			return (0);
+	}
+	return (1);
+}
+
 int							sbp_hdl(t_term *s_term)
 {
 	t_slave					*s_slave;
 	t_sbp					*sbp;
+	int						ret;
 	
 	s_slave = &s_term->slave;
+	ret = hbp_hdl(s_slave, s_term->slave.e_hbp);
 	if (!(sbp = sbp_hdl_step(&s_term->slave)))
 	{
 		sbp = s_slave->e_sbp;
@@ -128,16 +165,16 @@ int							sbp_hdl(t_term *s_term)
 				(void *)s_slave->regs.rip);
 		refresh_exe_state(&s_term->slave, 0);
 		wrefresh(s_slave->wins[WIN_SH]);
-		sbp->current = SBP_CURRENT;
+		sbp->current = BP_CURRENT;
 		return (sbp_disable(s_slave, sbp));
-	/*	return (take_step(s_term, &step_slave)); */
 	}
-	return (1);
+	return (ret);
 }
 
 int							sbp_restore(t_slave *s_slave)
 {
 	t_sbp					*sbp;
+	t_hbp					*hbp;
 
 	sbp = s_slave->d_sbp;
 	while (sbp)
@@ -145,6 +182,13 @@ int							sbp_restore(t_slave *s_slave)
 		sbp_enable(s_slave, sbp);
 		sbp->current = 0;
 		sbp = sbp->nxt;
+	}
+	hbp = s_slave->d_hbp;
+	while (hbp)
+	{
+		hbp_enable(s_slave, hbp);
+		hbp->current = 0;
+		hbp = hbp->nxt;
 	}
 	return (0);
 }
@@ -240,4 +284,79 @@ int							new_sbp(t_term *s_term, char **av)
 	waddstr(s_slave->wins[WIN_SH], "\t[X] Need an address to break at.\n");
 	sh_refresh(s_term->slave.wins[WIN_SH], 0, 0);
 	return (1);
+}
+
+int							set_access(char *access, char *av)
+{
+	if (*av && !*(av + 1))
+	{
+		switch (*av)
+		{
+		 case ('x'):
+			 *access = HBP_ACCESS_EXEC;
+			 return (0);
+		 case ('a'):
+			 *access = HBP_ACCESS_ANY;
+			 return (0);
+		 case ('m'):
+			 *access = HBP_ACCESS_MEM;
+			 return (0);
+		 case ('w'):
+			 *access = HBP_ACCESS_WRITE;
+			 return (0);
+		 default:
+			 return (-1);
+		}
+	}
+	return (-1);
+}
+
+int							new_hbp(t_term *s_term, char **av)
+{
+	t_slave					*slave;
+	t_hbp					*hbp;
+	long					addr;
+	char					access;
+	char					len;
+
+
+	/* addr ccess type / len / scope */
+	slave = &s_term->slave;
+	if (av[1] && av[2])
+	{
+		addr = strtol(av[1], NULL, 16);
+		if (set_access(&access, av[2]))
+		{
+			wprintw(slave->wins[WIN_SH], "\t[X] access: 'a'-> ANY 'w' -> WRITE \
+'x' -> EXEC 'm' -> MEM (RDWR)\n");
+			return (1);
+		}
+		len = 0;
+		if (av[3] && ((len = atoi(av[3])) > 8 || len % 2 || len == 6))
+		{
+			wprintw(slave->wins[WIN_SH], "\t[X] len parameter must be 1 2 4 or 8\n");
+			return (-1);
+		}
+		if (av[3] && av[4] && atoi(av[4]) != 0)
+			access = HBP_SCOPE_GLOBAL;
+		else
+			access = HBP_SCOPE_LOCAL;
+		if (!(hbp = malloc(sizeof(*hbp))))
+			return (-1);
+		memset(hbp, 0, sizeof(*hbp));
+		hbp->addr = addr;
+		hbp->access = access;
+		hbp->len = len;	
+		if (hbp_set(slave->pid, hbp))
+		{
+			free(hbp);
+			return (-1);
+		}
+		hbp_append(&slave->e_hbp, hbp, 1);
+		wprintw(slave->wins[WIN_SH], "\t[+] New watchpoint set at %p\n", hbp->addr);
+		return (0);
+	}
+	else
+		wprintw(slave->wins[WIN_SH], "args: addr access [len] [scope]\n");
+	return (-1);
 }

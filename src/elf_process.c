@@ -247,9 +247,9 @@ static struct link_map		*elf_linkmap_base(pid_t pid, Elf64_Dyn *got)
 
 	link_map = NULL;
 	/* link_map is second entry in GOT */
-	lm_addr = get_data(pid, got->d_un.d_ptr + sizeof(long),
-				   sizeof(long));
-	link_map = get_data(pid, *lm_addr, sizeof(*link_map));
+	if ((lm_addr = get_data(pid, got->d_un.d_ptr + sizeof(long),
+				   sizeof(long))))
+		link_map = get_data(pid, *lm_addr, sizeof(*link_map));
 	free(lm_addr);
 	return (link_map);
 }
