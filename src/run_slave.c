@@ -79,108 +79,6 @@ int                             ptrace_exec(char *path, char **cmd,
 	return (pid);
 }
 
-void							output(WINDOW *win, char *s, size_t len)
-{
-	size_t						i;
-
-	i = 0;
-	while (i < len)
-	{
-		if (s[i] == '\n' || s[i] == '\r')
-		{
-			wmove(win, getcury(win), getmaxx(win));
-			wmove(win, getcury(win) + 1, 0);
-		}
-		else
-			waddch(win, s[i]);
-		if (i + 1 < len && s[i] == '\r' && s[i + 1] == '\n')
-			++i;
-		++i;
-	} 
-	wrefresh(win);
-}
-
-
-
-int								handle_pty(int fdm, WINDOW *win, int pid)
-{
-	fd_set						fd_in;
-	ssize_t						r_len;
-	char						buff[256];
-	struct timeval				tv;
-	int							i;
-	int							x;
-	int							y;
-
-	x = 0;
-	while (!x)
-	{
-		memset(&tv, 0, sizeof(tv));
-		tv.tv_usec = 10;
-		FD_ZERO(&fd_in);
-		FD_SET(fdm, &fd_in);
-		FD_SET(0, &fd_in);
-		if (select(fdm + 1, &fd_in, NULL, NULL, &tv) < 0)
-		{
-			perror("Err on select()");
-			waitpid(pid, &x, 0);
-			return (x);
-		}
-		if (FD_ISSET(0, &fd_in))
-		{
-			sh_refresh(win, 0, 0);
-			while ((r_len = read(0, buff, sizeof(buff))) > 0)
-			{
-				if (memchr(buff, '\x04', r_len))
-				{
-					write(fdm, "\n", 1);
-					break ;
-				}
-				if (memchr(buff, '\x03', r_len))
-				{
-					kill(pid, SIGINT);
-					break ;
-				}
-				output(win, buff, r_len);
-				sh_refresh(win, 0, 0);
-				write(fdm, buff, r_len);
-				if (memchr(buff, '\r', r_len))
-				{
-					write(fdm, "\n", 1);
-					break ;
-				}
-			}
-			if (r_len < 0)
-			{
-				waitpid(pid, &x, 0);
-				return (x);
-			}
-		}  
-		else if (FD_ISSET(fdm, &fd_in))
-		{
-			y = fcntl(fdm, F_GETFL, 0) | O_NONBLOCK;
-			fcntl(fdm, F_SETFL, y);
-			while ((r_len = read(fdm, buff, sizeof(buff) - 1)) > 0)
-			{
-				buff[r_len] = 0;
-				output(win, buff, r_len);
-			}
-			y = fcntl(fdm, F_GETFL, 0) ^ O_NONBLOCK;
-			fcntl(fdm, F_SETFL, y);
-			if (r_len < 0)
-			{
-				waitpid(pid, &x, 0);
-				return (x);
-			}
-		}
-		if (waitpid(pid, &i, WNOHANG) != pid)
-			x = 0;
-		else
-			x = 1;
-	}
-	return (i);
-}
-
 int								cont_slave(t_slave *slave)
 {
 	int							status;
@@ -211,15 +109,6 @@ int								step_slave(t_slave *slave)
 	}
 	status = handle_pty(slave->fdm, slave->wins[WIN_SH], slave->pid);
 	return (status);
-}
-
-void					print_link_map(struct link_map *link_map)
-{
-	while (link_map)
-	{
-		fprintf(stderr, "addr: %lx name: %s\n", link_map->l_addr, link_map->l_name);
-		link_map = link_map->l_next;
-	}
 }
 
 void			update_elf(t_slave *s_slave)
@@ -256,8 +145,8 @@ char            refresh_exe_state(t_slave *s_slave, char sclean)
 		}
 		dump_regs(&s_slave->old_regs, &s_slave->regs, s_slave->wins, 1);
 		wrefresh(s_slave->wins[WIN_REGS]);
-		dump_stack(s_slave->pid, &s_slave->old_regs, &s_slave->regs, s_slave->wins,
-				   sclean);
+		dump_stack(s_slave->pid, &s_slave->old_regs, &s_slave->regs,
+				   s_slave->wins, sclean);
 		wrefresh(s_slave->wins[WIN_REGS]);
 		sh_refresh(s_slave->wins[WIN_SH], 0, 0);
 		update_code(s_slave);
@@ -352,35 +241,6 @@ int				blind_cont_prog(t_term *s_term, char UN **av)
 	return (0);
 }
 
-int						open_pty(t_slave *s_slave)
-{
-	struct termios		term;
-
-	if ((s_slave->fdm = posix_openpt(O_RDWR)) < 0)
-	{
-		perror("Err on posix_openpt()");
-		return (-1);
-	}
-	if (grantpt(s_slave->fdm))
-	{
-		perror("Err on grantpt()");
-		return (-1);
-	}
-	if (unlockpt(s_slave->fdm))
-	{
-		perror("Err on unlockpt()");
-		return (-1);
-	}
-	if ((s_slave->fds = open(ptsname(s_slave->fdm), O_RDWR)) < 0)
-	{
-		perror("Err on open() pty");
-	}
-	tcgetattr(s_slave->fds, &term);
-	term.c_cc[VEOF] = '\x04';
-	tcsetattr(s_slave->fds, TCSADRAIN, &term);
-	return (0);
-}
-
 int				start_slave(char *path, char **cmd, char **environ,
 							t_slave *s_slave)
 {
@@ -402,8 +262,8 @@ int				start_slave(char *path, char **cmd, char **environ,
 	if (WIFEXITED(status))
 	{
 		wmove(s_slave->wins[WIN_MAIN], 1, 3);
-		wprintw(s_slave->wins[WIN_MAIN], "%s won't be enslaved: can't execute it\n",
-				path);
+		wprintw(s_slave->wins[WIN_MAIN],
+				"%s won't be enslaved: can't execute it\n", path);
 		wrefresh(s_slave->wins[WIN_MAIN]);
 		return (slave_exit(s_slave->wins[WIN_SH], s_slave));
 	}

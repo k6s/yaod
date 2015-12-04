@@ -297,4 +297,12 @@ int				get_code(pid_t pid, unsigned long rip, int max_ins,
 						 struct cs_insn **ins, t_sbp *sbp);
 int				update_code(t_slave *s_slave);
 
+/*
+ * Slave's I/O
+ * ===========
+ */
+
+int				handle_pty(int fdm, WINDOW *win, int pid);
+int				open_pty(t_slave *s_slave);
+
 #endif /* ! _SEE_STACK_H */
