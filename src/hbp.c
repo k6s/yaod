@@ -50,8 +50,6 @@ int					set_debug_register(pid_t pid, int regnum, long val)
 	errno = 0;
 	ptrace(PTRACE_POKEUSER, pid, offsetof(struct user, u_debugreg)
 			+ sizeof(((struct user *)0)->u_debugreg[0]) * regnum, val);
-	if (errno)
-		perror("POKEUSER");
 	return (errno);
 }
 
@@ -62,8 +60,6 @@ int					get_debug_register(pid_t pid, int regnum)
 	errno = 0;
 	dr_val = ptrace(PTRACE_PEEKUSER, pid, offsetof(struct user, u_debugreg)
 		   + sizeof(((struct user *)0)->u_debugreg[0]) * regnum, 0);
-	if (errno)
-		perror("PEEKUSER");
 	return ((int)dr_val);
 }
 

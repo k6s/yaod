@@ -90,7 +90,7 @@ int							hbp_disable(t_slave *s_slave, t_hbp *hbp)
 	ret = hbp_unset(s_slave->pid, hbp);
 	hbp_remove(&s_slave->e_hbp, hbp);	
 	hbp_append(&s_slave->d_hbp, hbp, -1);
-	return (0);
+	return (ret);
 }
 
 int							hbp_enable(t_slave *s_slave, t_hbp *hbp)
@@ -107,15 +107,8 @@ t_sbp						*sbp_hdl_step(t_slave *s_slave)
 {
 	t_sbp					*sbp;
 
-	sbp = s_slave->e_sbp;
-	while (sbp && (sbp->addr != s_slave->old_regs.rip
-				   || sbp->current != BP_STEP))
-		sbp = sbp->nxt;
-	if (sbp)
+	if (HBP_DR6_STEP(get_debug_register(s_slave->regs.rip, 6)))
 	{
-		sbp_remove(&s_slave->e_sbp, sbp);
-		sbp_remove(&s_slave->d_sbp, sbp);
-		free(sbp);
 		sbp = s_slave->e_sbp;
 		while (sbp && (sbp->addr != s_slave->regs.rip || sbp->current))
 			sbp = sbp->nxt;

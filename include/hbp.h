@@ -36,6 +36,8 @@
 											 | HBP_DR7_TYPE(reg, access) \
 											 | HBP_DR7_LEN(reg, len))
 
+# define HBP_DR6_STEP(reg)					(((reg) >> 14) & 1)
+
 typedef struct		s_hbp
 {
 	unsigned long	addr;

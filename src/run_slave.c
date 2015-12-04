@@ -94,14 +94,8 @@ int								cont_slave(t_slave *slave)
 
 int								step_slave(t_slave *slave)
 {
-	t_sbp						*sbp;
 	int							status;
 
-	if (!(sbp = malloc(sizeof(*sbp))))
-		return (-1);
-	sbp->addr = slave->regs.rip;
-	sbp->current = BP_STEP;
-	sbp_append(&slave->e_sbp, sbp, 1);
 	if (ptrace(PTRACE_SINGLESTEP, slave->pid, NULL, NULL))
 	{
 		waitpid(slave->pid, &status, 0);
