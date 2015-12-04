@@ -311,6 +311,23 @@ int							set_access(char *access, char *av)
 	return (-1);
 }
 
+static char					hbp_free_slot(t_hbp *hbp)
+{
+	char					regs[4] = {0};
+	int						i;
+
+	while (hbp)
+	{
+		if (hbp->regnum < 4)
+			regs[hbp->regnum] = 1;
+		hbp = hbp->nxt;
+	}
+	i = 0;
+	while (i < 4 && regs[i])
+		++i;
+	return (i < 4 ? i : -1);
+}
+
 int							new_hbp(t_term *s_term, char **av)
 {
 	t_slave					*slave;
@@ -318,9 +335,9 @@ int							new_hbp(t_term *s_term, char **av)
 	long					addr;
 	char					access;
 	char					len;
+	char					scope;
+	char					reg;
 
-
-	/* addr ccess type / len / scope */
 	slave = &s_term->slave;
 	if (av[1] && av[2])
 	{
@@ -334,26 +351,36 @@ int							new_hbp(t_term *s_term, char **av)
 		len = 0;
 		if (av[3] && ((len = atoi(av[3])) > 8 || len % 2 || len == 6))
 		{
-			wprintw(slave->wins[WIN_SH], "\t[X] len parameter must be 1 2 4 or 8\n");
+			wprintw(slave->wins[WIN_SH], "\t[X] len parameter must be 1 2 4 or\
+8\n");
 			return (-1);
 		}
 		if (av[3] && av[4] && atoi(av[4]) != 0)
-			access = HBP_SCOPE_GLOBAL;
+			scope = HBP_SCOPE_GLOBAL;
 		else
-			access = HBP_SCOPE_LOCAL;
+			scope = HBP_SCOPE_LOCAL;
+		if ((reg = hbp_free_slot(slave->e_hbp)) < 0)
+		{
+			wprintw(slave->wins[WIN_SH], "\t[X] No space left for another \
+watchpoint.\n");
+			return (-1);
+		}
 		if (!(hbp = malloc(sizeof(*hbp))))
 			return (-1);
 		memset(hbp, 0, sizeof(*hbp));
 		hbp->addr = addr;
 		hbp->access = access;
 		hbp->len = len;	
+		hbp->scope = scope;
+		hbp->regnum = reg;
 		if (hbp_set(slave->pid, hbp))
 		{
 			free(hbp);
 			return (-1);
 		}
 		hbp_append(&slave->e_hbp, hbp, 1);
-		wprintw(slave->wins[WIN_SH], "\t[+] New watchpoint set at %p\n", hbp->addr);
+		wprintw(slave->wins[WIN_SH], "\t[+] New watchpoint set at %p\n",
+				hbp->addr);
 		return (0);
 	}
 	else
