@@ -165,7 +165,7 @@ int				take_step(t_term *s_term, int (*exe_nxt)(t_slave * ))
 		wprintw(s_term->slave.wins[WIN_SH], "Slave killed: shit happened\n");
 		kill(s_term->slave.pid, SIGKILL);
 	}
-	if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP && !sbp_hdl(s_term))
+	if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP && !bp_hdl(s_term))
 		return (breaked_update(s_term));
 	if (WIFEXITED(status))
 		endwin();

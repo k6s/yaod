@@ -170,22 +170,29 @@ char		exe_builtin(t_prog *prog, char **av, t_term *s_term);
 */
 int			run_loop(t_term *s_term, char UN **av);
 int			step_prog(t_term *s_term, char UN **av);
-int			new_sbp(t_term *s_term, char UN **av);
-int			sbp_lst(t_term *s_term, char UN **av);
 int			cont_loop(t_term *s_term, char UN **av);
 int			blind_cont_prog(t_term *s_term, char UN **av);
+
 int			sbp_delete(t_term *s_term, char **av);
+int			new_sbp(t_term *s_term, char UN **av);
+int			sbp_lst(t_term *s_term, char UN **av);
+
 int			info_segment(t_term *s_term, char UN **av);
 int			info_dynsym(t_term *s_term, char UN **av);
 int			info_symtab(t_term *s_term, char UN **av);
 int			info_dyntab(t_term *s_term, char UN **av);
 int			info_linkmap(t_term *s_term, char UN **av);
 int			info_sections(t_term *s_term, char UN **av);
+
 int			help(t_term *s_term, char UN **av);
+
 int			print_xascii(t_term *s_term, char UN **av);
 int			print_xnoascii(t_term *s_term, char UN **av);
 int			print_val(t_term *s_term, char UN **av);
 int			print_str(t_term *s_term, char UN **av);
+
 int			new_hbp(t_term *s_term, char **av);
+int			hbp_lst(t_term *s_term, char UN **av);
+int			hbp_delete(t_term *s_term, char UN **av);
 
 #endif /* !MINISHELL1_H_ */

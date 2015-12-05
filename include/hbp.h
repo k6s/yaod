@@ -56,4 +56,7 @@ int					hbp_unset(pid_t pid, t_hbp *hbp);
 void				hbp_append(t_hbp **r, t_hbp *n, char inc);
 void				hbp_remove(t_hbp **r, t_hbp *hbp);
 
+int					set_debug_register(pid_t pid, int regnum, long val);
+int					get_debug_register(pid_t pid, int regnum);
+
 #endif

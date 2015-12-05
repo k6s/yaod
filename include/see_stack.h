@@ -40,6 +40,7 @@
 # include <ptrace_get.h>
 # include <capstone/capstone.h>
 # include <hbp.h>
+# include <sbp.h>
 
 typedef struct s_buff	t_buff;		/*! @brief typedef to @ref s_buff */
 typedef struct s_prog	t_prog;		/*! @brief typedef to @ref s_prog */
@@ -129,6 +130,19 @@ enum					e_regum
 	E_GS
 };
 
+typedef struct		t_bp
+{
+	t_hbp			*e_hbp;
+	t_hbp			*d_hbp;
+	t_sbp			*s_sbp;
+	t_sbp			*d_sbp;
+	int				dr6;
+}					s_bp;
+
+int							sbp_disable(t_slave *s_slave, t_sbp *sbp);
+int							sbp_enable(t_slave *s_slave, t_sbp *sbp);
+int							sbp_restore(t_slave *s_slave);
+
 /*!
  * @brief Informations and memory content of a process.
  */
@@ -151,27 +165,6 @@ struct							s_slave
 
 # define SLAVE_EXIT			42
 # define SLAVE_BREAK		23
-
-# define BP_STEP			2
-# define BP_CURRENT			1
-
-/*!
- * @brief Software breakpoint.
- */
-struct						s_sbp
-{
-	unsigned long			addr;		/*!< @brief breakpoint address */
-	unsigned long			saved;		/*!< @brief saved data to restore */
-	char					current;	/*!< @brief Disable flag */
-	t_sbp					*nxt;		/*!< @brief pointer to next bp */
-	t_sbp					*prv;		/*!< @brief pointer to previous bp */
-	ssize_t					id;			/*!< @brief Breakpoint ID */
-};
-
-int							sbp_disable(t_slave *s_slave, t_sbp *sbp);
-int							sbp_enable(t_slave *s_slave, t_sbp *sbp);
-int							sbp_restore(t_slave *s_slave);
-void						sbp_append(t_sbp **r, t_sbp *n, char inc);
 
 int							hbp_disable(t_slave *s_slave, t_hbp *hbp);
 int							hbp_enable(t_slave *s_slave, t_hbp *hbp);
@@ -280,7 +273,7 @@ void			restore_stack_color(WINDOW **wins, size_t *idx_res);
  * ===========
  */
 
-int				sbp_hdl(t_term *s_term);
+int				bp_hdl(t_term *s_term);
 int				start_slave(char *path, char **cmd, char **environ,
 								t_slave *s_slave);
 int				ptrace_exec(char *path, char **cmd, char **environ, int fd_s,

@@ -36,8 +36,11 @@ SRCS	= 		sh/main.c \
 				code.c \
 				print_mem.c \
 				showmem.c \
-				infos.c \
+				cmd_infos.c \
 				hbp.c \
+				sbp.c \
+				cmd_hbp.c \
+				cmd_sbp.c \
 				slave_io.c
 OBJS	= $(addprefix obj/, $(SRCS:.c=.o))
 CFLAGS	+= -Wall -Wextra -ansi -lcurses -ggdb -std=gnu11

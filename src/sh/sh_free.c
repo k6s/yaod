@@ -43,6 +43,18 @@ void			free_sbp(t_sbp *sbp)
 	}
 }
 
+void			free_hbp(t_hbp *hbp)
+{
+	t_hbp		*t;
+
+	while (hbp)
+	{
+		t = hbp;
+		hbp = hbp->nxt;
+		free(t);
+	}
+}
+
 void			free_stuff(t_term *s_term)
 {
 	if (s_term->progs)
