@@ -15,10 +15,11 @@
 # define _SEE_STACK_H
 
 # define _XOPEN_SOURCE		600
-# define _POSIX_C_SOURCE	200809L
-# define _DEFAULT_SOURCE
+# define _POSIX_C_SOURCE	201109L
+# define _DEFAULT_SOURCE 
 # define __USE_MISC
 
+# include <sys/types.h>
 # include <sys/mman.h>
 # include <sys/ioctl.h>
 # include <sys/select.h>
@@ -29,8 +30,8 @@
 # include <strings.h>
 # include <stdio.h>
 # include <stdlib.h>
+# include <stdint.h>
 # include <sys/user.h>
-# include <sys/types.h>
 # include <sys/wait.h>
 # include <limits.h>
 # include <curses.h>
@@ -163,8 +164,10 @@ struct							s_fnt
 	struct user_regs_struct		*regs;
 	unsigned char				*stack;
 	int							type;
-	long						end;
+	unsigned long				end;
 };
+
+t_fnt						*fnt_new(pid_t pid, t_elf *elf, u_long addr);
 
 /*!
  * @brief Informations and memory content of a process.
@@ -233,7 +236,7 @@ void			update_vars(struct user_regs_struct *regs, long stack_frame,
 							long old_stack_frame, WINDOW **wins, unsigned *hl);
 int				dump_new_vars(struct user_regs_struct *regs,
 							  struct user_regs_struct *old_regs,
-							  void UN *stack_frame, WINDOW UN *win, unsigned *hl);
+							  void *stack_frame, WINDOW *win, unsigned *hl);
 int				dump_stack(pid_t pid, struct user_regs_struct *old_regs,
 						   struct user_regs_struct *regs, WINDOW **wins,
 						   char clean);

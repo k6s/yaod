@@ -21,7 +21,7 @@ void					fnt_prev(t_fnt **r)
 	free(fnt);
 }
 
-Elf64_Sym				*fnt_sym(Elf64_Sym **sym, long addr)
+Elf64_Sym				*fnt_sym(Elf64_Sym **sym, unsigned long addr)
 {
 	size_t				i;
 
@@ -44,7 +44,7 @@ Elf64_Sym				*fnt_sym(Elf64_Sym **sym, long addr)
 	return (NULL);
 }
 
-int					fnt_shared_sym(pid_t pid, struct link_map *lm, long addr,
+int					fnt_shared_sym(pid_t pid, struct link_map *lm, u_long addr,
 								   t_fnt *fnt)
 {
 	t_tables_addr	*tables;
@@ -56,7 +56,8 @@ int					fnt_shared_sym(pid_t pid, struct link_map *lm, long addr,
 			if ((fnt->sym = elf_addr_dynsym_sym(pid, lm, tables, addr)))
 			{
 				fnt->type = FNT_SHA;
-				fnt->name = get_str(pid, tables->strtab + fnt->sym->st_name);
+				fnt->name = (char *)get_str(pid, tables->strtab
+											+ fnt->sym->st_name);
 				fnt->sym->st_value += lm->l_addr;
 				free(tables->nchains);
 				free(tables);
@@ -93,7 +94,7 @@ int					fnt_shared_sym_nosz(pid_t pid, struct link_map *lm,
 	return (-1);
 }
 */
-Elf64_Sym			*fnt_sym_nosz(Elf64_Sym **symtab, long *off, long addr)
+Elf64_Sym			*fnt_sym_nosz(Elf64_Sym **symtab, u_long *off, u_long addr)
 {
 	Elf64_Sym		*sym;
 	size_t			i;
@@ -105,9 +106,9 @@ Elf64_Sym			*fnt_sym_nosz(Elf64_Sym **symtab, long *off, long addr)
 		if (ELF64_ST_TYPE(symtab[i]->st_info) == STT_FUNC
 			&& symtab[i]->st_value)
 		{
-			if (!(long)symtab[i]->st_size && addr > (long)symtab[i]->st_value)
+			if (!symtab[i]->st_size && addr > symtab[i]->st_value)
 			{
-				if (addr - (long)symtab[i]->st_value < *off)
+				if (addr - symtab[i]->st_value < *off)
 				{
 					sym = symtab[i];
 					*off = addr - symtab[i]->st_value;
@@ -119,11 +120,11 @@ Elf64_Sym			*fnt_sym_nosz(Elf64_Sym **symtab, long *off, long addr)
 	return (sym);
 }
 
-Elf64_Sym			*fnt_nosz(pid_t pid, t_elf *elf, long addr, t_fnt *fnt)
+Elf64_Sym			*fnt_nosz(pid_t pid, t_elf *elf, u_long addr, t_fnt *fnt)
 {
 	Elf64_Sym		*sym;
 	Elf64_Sym		*new_sym;
-	long			off;
+	u_long			off;
 
 	sym = NULL;
 	off = LONG_MAX - 1;
@@ -146,7 +147,7 @@ Elf64_Sym			*fnt_nosz(pid_t pid, t_elf *elf, long addr, t_fnt *fnt)
 	return (new_sym ? new_sym : sym);
 }
 
-t_fnt				*fnt_new(pid_t pid, t_elf *elf, long addr)
+t_fnt				*fnt_new(pid_t pid, t_elf *elf, u_long addr)
 {
 	t_fnt			*fnt;
 

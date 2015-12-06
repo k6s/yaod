@@ -139,6 +139,9 @@ char					*elf_addr_symbol(pid_t pid, struct link_map *link_map,
 long					elf_symbol_addr(pid_t pid, struct link_map *link_map,
 										t_tables_addr *s_tables, char *symbol);
 
+Elf64_Sym			*elf_addr_dynsym_sym(pid_t pid, struct link_map *link_map,
+						 t_tables_addr *s_tables, unsigned long sym_addr);
+
 int						elf_populate_dynsym(pid_t pid,
 											struct link_map *link_map,
 											Elf64_Sym **dynsym, char *dynstr,

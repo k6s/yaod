@@ -11,6 +11,8 @@
 #ifndef MINISHELL1_H_
 # define MINISHELL1_H_
 
+# include <see_stack.h>
+
 # ifndef _POSIX_SOURCE
 #  define _POSIX_SOURCE
 # endif
@@ -18,7 +20,6 @@
 # include <unistd.h>
 # include <my.h>
 # include <get_next_line.h>
-# include <see_stack.h>
 # include <termcap.h>
 # include <termios.h>
 # include <fcntl.h>
