@@ -557,3 +557,41 @@ int					info_sections(t_term *s_term, char UN **av)
 	}
 	return (0);
 }
+
+int						info_rela(t_term *s_term, char UN **av)
+{
+	Elf64_Rela			**rela;
+	size_t				i;
+	WINDOW				*win;
+	char				*name;
+	size_t				dyn_idx;
+	t_elf				*elf;
+	Elf64_Shdr			*shdr;
+
+	elf = s_term->slave.elf;
+	if (!(shdr = elf_shdr_type(elf->s_hdr, SHT_DYNSYM)))
+		return (-1);
+	if ((rela = s_term->slave.elf->rela_plt))
+	{
+		i = 0;
+		win = s_term->slave.wins[WIN_SH];
+		info_title(s_term->slave.wins[WIN_SH], "\t\t---= Relocations =---\n");
+		while (rela[i])
+		{
+			wattrset(win, A_BOLD);
+			if ((dyn_idx = ELF64_R_SYM(rela[i]->r_info))
+				 < shdr->sh_size / shdr->sh_entsize
+			   	&& (name = elf_symstr(elf->dynstr, elf->dynsym[dyn_idx]->st_name,
+									  elf->strsz)) && *name)
+			   	wprintw(win, "%-30s ", name);
+			else
+			   	wprintw(win, "%-30s ", "Unknown symbol");
+			wattroff(win, A_BOLD);
+			wprintw(win, "0x%-012lx", rela[i]->r_offset);
+			wprintw(win, " %-08lx", rela[i]->r_info);
+			wprintw(win, " %-08x\n", rela[i]->r_addend);
+			++i;
+		}
+	}
+	return (0);
+}

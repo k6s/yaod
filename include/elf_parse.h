@@ -26,6 +26,7 @@ struct						s_elf
 	Elf64_Dyn				**dyn;
 	Elf64_Sym				**dynsym;
 	Elf64_Sym				**symtab;
+	Elf64_Rela				**rela_plt;
 	char					*dynstr;
 	Elf64_Xword				strsz;
 	char					*strtab;
@@ -90,6 +91,9 @@ Elf64_Sym				**elf_dynsym(pid_t pid, Elf64_Dyn **dynsym,
 char					*elf_strtab(pid_t pid, Elf64_Dyn **dyn,
 								   	Elf64_Xword *strsz);
 
+Elf64_Rela				**elf_rela(pid_t pid, Elf64_Shdr **shdr, char *strtab,
+								  long sstrsz);
+
 /*!
  * \brief Get process's GOT address.
  * \param pid Process ID.
@@ -146,4 +150,9 @@ int						elf_populate_dynsym(pid_t pid,
 											struct link_map *link_map,
 											Elf64_Sym **dynsym, char *dynstr,
 											unsigned strsz);
+
+Elf64_Shdr				*elf_shdr_type(Elf64_Shdr **shdr, Elf64_Word type);
+Elf64_Shdr				*elf_shdr_name(Elf64_Shdr **shdr, Elf64_Word type,
+									   char *name, char *strtab, long sstrsz);
+
 #endif

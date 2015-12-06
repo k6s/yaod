@@ -184,6 +184,7 @@ int			info_symtab(t_term *s_term, char UN **av);
 int			info_dyntab(t_term *s_term, char UN **av);
 int			info_linkmap(t_term *s_term, char UN **av);
 int			info_sections(t_term *s_term, char UN **av);
+int			info_rela(t_term *s_term, char UN **av);
 
 int			help(t_term *s_term, char UN **av);
 

@@ -63,7 +63,7 @@ void			free_fnt(t_fnt *fnt)
 	{
 		t = fnt;
 		free(fnt->name);
-		if (fnt->type == FNT_SHA)
+		if (fnt->type == FNT_SHA || fnt->type == FNT_PLT)
 			free(fnt->sym);
 		fnt = fnt->prv;
 		free(t);

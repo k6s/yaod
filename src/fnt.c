@@ -69,9 +69,9 @@ int					fnt_shared_sym(pid_t pid, struct link_map *lm, u_long addr,
 	}
 	return (-1);
 }
-/*
+
 int					fnt_shared_sym_nosz(pid_t pid, struct link_map *lm,
-										long addr, t_fnt *fnt)
+										long addr, t_fnt *fnt, long off)
 {
 	t_tables_addr	*tables;
 
@@ -79,21 +79,20 @@ int					fnt_shared_sym_nosz(pid_t pid, struct link_map *lm,
 	{
 		if ((tables = elf_tables(pid, lm)))
 		{
-			if ((fnt->sym = elf_addr_dynsym_sym(pid, lm, tables, addr)))
+			if ((fnt->sym = elf_addr_dynsym_sym_nosz(pid, lm, tables, addr, off)))
 			{
 				fnt->type = FNT_SHA;
 				fnt->name = get_str(pid, tables->strtab + fnt->sym->st_name);
 				free(tables->nchains);
 				free(tables);
-				return (0);
 			}
 			free(tables);
 		}
 		lm = lm->l_next;
 	}
-	return (-1);
+	return (fnt->type == FNT_SHA ? 0 : -1);
 }
-*/
+
 Elf64_Sym			*fnt_sym_nosz(Elf64_Sym **symtab, u_long *off, u_long addr)
 {
 	Elf64_Sym		*sym;
@@ -132,6 +131,11 @@ Elf64_Sym			*fnt_nosz(pid_t pid, t_elf *elf, u_long addr, t_fnt *fnt)
 		sym = fnt_sym_nosz(elf->symtab, &off, addr);
 	if (elf->dynsym)
 		new_sym = fnt_sym_nosz(elf->dynsym, &off, addr);
+	if (elf->link_map)
+	{
+		if (!fnt_shared_sym_nosz(pid, elf->link_map, addr, fnt, off))
+			return (fnt->sym);
+	}
 	if (new_sym)
 	{
 		fnt->name = elf_symstr(elf->dynstr, new_sym->st_name, elf->strsz);
@@ -147,6 +151,34 @@ Elf64_Sym			*fnt_nosz(pid_t pid, t_elf *elf, u_long addr, t_fnt *fnt)
 	return (new_sym ? new_sym : sym);
 }
 
+Elf64_Sym			*fnt_plt_sym(t_elf *elf, u_long addr, u_long *end)
+{
+	Elf64_Shdr		*sh_dyn;
+	Elf64_Shdr		*sh_plt;
+	size_t			sym_idx;
+	Elf64_Sym		*sym;
+
+	if ((sh_plt = elf_shdr_name(elf->s_hdr, SHT_PROGBITS, ".plt", elf->strtab,
+								elf->sstrsz)))
+	{
+		if (addr >= sh_plt->sh_addr && addr < sh_plt->sh_addr + sh_plt->sh_size)
+		{
+			sym_idx = (addr - sh_plt->sh_addr) / sh_plt->sh_entsize;
+			if ((sh_dyn = elf_shdr_type(elf->s_hdr, SHT_DYNSYM))
+				&& sym_idx < sh_dyn->sh_size / sh_dyn->sh_entsize)
+			{
+				*end = elf->dynsym[sym_idx]->st_value + sh_dyn->sh_entsize;
+				if (!(sym = malloc(sizeof(*sym))))
+					return (NULL);
+				memcpy(sym, elf->dynsym[sym_idx], sizeof(Elf64_Sym));
+				sym->st_value = sh_plt->sh_addr + sym_idx * sh_plt->sh_entsize;
+				return (sym);
+			}
+		}
+	}
+	return (NULL);
+}
+
 t_fnt				*fnt_new(pid_t pid, t_elf *elf, u_long addr)
 {
 	t_fnt			*fnt;
@@ -155,6 +187,18 @@ t_fnt				*fnt_new(pid_t pid, t_elf *elf, u_long addr)
 	if (!(fnt = malloc(sizeof(*fnt))))
 		return (NULL);
 	memset(fnt, 0, sizeof(*fnt));
+	if (elf->s_hdr && elf->dynsym
+		&& (fnt->sym = fnt_plt_sym(elf, addr, &fnt->end)))
+	{
+		if ((fnt->name = elf_symstr(elf->dynstr, fnt->sym->st_name, elf->strsz)))
+		{
+			if (!(fnt->name = realloc(fnt->name, strlen(fnt->name) + 5)))
+				return (NULL);
+			memcpy(fnt->name + strlen(fnt->name), "@plt", 4);
+			fnt->type = FNT_PLT;
+		}
+		return (fnt);
+	}
 	if (elf->dynsym && (fnt->sym = fnt_sym(elf->dynsym, addr)))
 	{
 		fnt->name = elf_symstr(elf->dynstr, fnt->sym->st_name, elf->strsz);

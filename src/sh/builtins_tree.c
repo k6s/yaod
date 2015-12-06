@@ -78,6 +78,8 @@ char			add_builtins(t_progs *progs)
 		return (-1);
 	if (add_builtin(progs, "ish", &info_sections) == -1)
 		return (-1);
+	if (add_builtin(progs, "ir", &info_rela) == -1)
+		return (-1);
 	if (add_builtin(progs, "pxa", &print_xascii) == -1)
 		return (-1);
 	if (add_builtin(progs, "px", &print_xnoascii) == -1)

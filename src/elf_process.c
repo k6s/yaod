@@ -191,6 +191,33 @@ char					*elf_strtab(pid_t pid, Elf64_Dyn **dyn,
 	return (NULL);
 }
 
+Elf64_Rela				**elf_rela(pid_t pid, Elf64_Shdr **shdr, char *strtab,
+								  long sstrsz)
+{
+	Elf64_Rela			**rela;
+	Elf64_Shdr			*rshdr;
+	size_t				i;
+	long				size;
+
+	rela = NULL;
+	if ((rshdr = elf_shdr_name(shdr, SHT_RELA, ".rela.plt", strtab, sstrsz)))
+	{
+		size = rshdr->sh_size / rshdr->sh_entsize;
+		if (!(rela = malloc(sizeof(*rela) *(size + 1))))
+			return (NULL);
+		i = 0;
+		memset(rela, 0, sizeof(*rela) * (size + 1));
+		while (i < rshdr->sh_size / rshdr->sh_entsize)
+		{
+			if (!(rela[i] = get_data(pid, rshdr->sh_addr + i * sizeof(**rela),
+									 sizeof(**rela))))
+				return (NULL);
+			++i;
+		}
+	}
+	return (rela);
+}
+
 Elf64_Word				elf_pseudo_nchains(Elf64_Dyn **dyn)
 {
 	size_t				i;
@@ -219,6 +246,7 @@ t_elf					*elf_from_process(pid_t pid, t_elf *elf)
 			elf->dynstr = elf_strtab(pid, elf->dyn, &elf->strsz);
 			elf->dynsym = elf_dynsym(pid, elf->dyn, elf->nchains,
 									 &elf->linked);
+			elf->rela_plt = elf_rela(pid, elf->s_hdr, elf->strtab, elf->sstrsz);
 			return (elf);
 		}
 	}
@@ -310,6 +338,41 @@ t_tables_addr				*elf_tables(pid_t pid, struct link_map *link_map)
 		}
 	}
 	return (tables);
+}
+
+#include <sys/types.h>
+
+Elf64_Sym			*elf_addr_dynsym_sym_nosz(pid_t pid,
+						struct link_map *link_map,
+						t_tables_addr *s_tables, unsigned long sym_addr,
+						unsigned long off)
+{
+	size_t			i;
+	Elf64_Sym		*sym;
+	Elf64_Sym		*ret_sym;
+
+	i = 0;
+	ret_sym = NULL;
+	if (s_tables->nchains && s_tables->symtab)
+	{
+		while (i < *s_tables->nchains)
+		{
+			if (!(sym = get_data(pid, s_tables->symtab + i * sizeof(*sym),
+								 sizeof(*sym))))
+				return (NULL);
+			if (ELF64_ST_TYPE(sym->st_info) == STT_FUNC)
+			{
+				if (!sym->st_size && sym_addr > sym->st_value + link_map->l_addr
+					&& sym->st_value + link_map->l_addr - sym_addr < off)
+				{
+					ret_sym = sym;
+					off = sym->st_value + link_map->l_addr - sym_addr;
+				}
+			}
+			++i;
+		}
+	}
+	return (ret_sym);
 }
 
 Elf64_Sym			*elf_addr_dynsym_sym(pid_t pid, struct link_map *link_map,

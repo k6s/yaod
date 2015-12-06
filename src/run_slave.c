@@ -145,7 +145,7 @@ int				update_func(pid_t pid, struct user_regs_struct *regs,
 			if (*fnt_lst)
 			{
 				free((*fnt_lst)->name);
-				if ((*fnt_lst)->type == FNT_SHA)
+				if ((*fnt_lst)->type == FNT_SHA || (*fnt_lst)->type == FNT_PLT)
 					free((*fnt_lst)->sym);
 			}
 			free(*fnt_lst);

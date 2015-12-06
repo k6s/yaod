@@ -1,5 +1,42 @@
 #include <elf_parse.h>
 
+Elf64_Shdr				*elf_shdr_type(Elf64_Shdr **shdr, Elf64_Word type)
+{
+	size_t				i;
+
+	i = 0;
+	while (shdr[i] && shdr[i]->sh_type != type)
+		++i;
+	return (shdr[i]);
+}
+
+Elf64_Shdr				*elf_shdr_name(Elf64_Shdr **shdr, Elf64_Word type,
+									   char *name, char *strtab, long sstrsz)
+{
+	size_t				i;
+	size_t				namlen;
+	char				*sym_name;
+
+	i = 0;
+	namlen = strlen(name);
+	while (shdr[i])
+	{
+		if (shdr[i]->sh_type == type)
+		{
+			if ((sym_name = elf_symstr(strtab, shdr[i]->sh_name, sstrsz)))
+			{
+				if (!strncmp(sym_name, name, namlen))
+				{
+					free(sym_name);
+					return (shdr[i]);
+				}
+				free(sym_name);
+			}
+		}
+		++i;
+	}
+	return (NULL);
+}
 
 Elf64_Shdr				**elf_file_shdr(int fd, Elf64_Ehdr *e_hdr)
 {

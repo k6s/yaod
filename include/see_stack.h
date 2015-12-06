@@ -155,6 +155,7 @@ int							hbp_enable(t_slave *s_slave, t_hbp *hbp);
 # define FNT_STA				1
 # define FNT_STA_NOSZ			2
 # define FNT_SHA				4
+# define FNT_PLT				8
 
 struct							s_fnt
 {
@@ -260,6 +261,7 @@ void			update_var(WINDOW *win, char *var, size_t off,
  * =======
  * curses output
  */
+
 void			print_byte(WINDOW *wins, unsigned char c);
 void			print_hex(WINDOW   *win, char *data, char *end_data);
 void			print_ascii(WINDOW *win, char *data, char *end_data);
