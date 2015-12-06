@@ -32,10 +32,6 @@ struct						s_elf
 	Elf64_Xword				sstrsz;
 	char					*shstrtab;
 	Elf64_Xword				shstrsz;
-	/* 
-	 * Not the original hash table value since hash table 'disapeared'.
-	 * DT_PLTRELSZ / sizeof(Elf64_Sym) + 1 (for 1st NULL dynsym entry)
-	 */
 	Elf64_Word				nchains;
 	struct link_map			*link_map;
 	char					linked;

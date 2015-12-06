@@ -126,6 +126,28 @@ void			update_elf(t_slave *s_slave)
 							s_slave->elf->strsz);
 }
 
+int				update_func(pid_t pid, struct user_regs_struct *regs,
+							struct user_regs_struct *old_regs,
+							t_elf *elf, t_fnt **fnt_lst)
+{
+	t_fnt		*fnt;
+
+	if (!*fnt_lst || !(*fnt_lst)->sym || (*fnt_lst && (*fnt_lst)->sym
+				 && regs && (regs->rip < (*fnt_lst)->sym->st_value
+					 || regs->rip > (*fnt_lst)->end)))
+	{
+			if (!(fnt = fnt_new(pid, elf, regs->rip)))
+				return (-1);
+			if (!fnt || (!fnt->name && !(fnt->name = strdup("???"))))
+				return (-1);
+			if (fnt->sym && fnt->sym->st_size)
+				fnt->end = fnt->sym->st_value + fnt->sym->st_size;
+			free(*fnt_lst);
+			*fnt_lst = fnt;
+	}
+	return (0);
+}
+
 char            refresh_exe_state(t_slave *s_slave, char sclean)
 {
 	if (s_slave->pid > -1)
@@ -139,6 +161,20 @@ char            refresh_exe_state(t_slave *s_slave, char sclean)
 		}
 		dump_regs(&s_slave->old_regs, &s_slave->regs, s_slave->wins, 1);
 		wrefresh(s_slave->wins[WIN_REGS]);
+		if (!update_func(s_slave->pid, &s_slave->regs, &s_slave->old_regs,
+					s_slave->elf, &s_slave->fnt))
+		{
+			wmove(s_slave->wins[WIN_MAIN], 1, WIN_CODE_OX);
+			wclrtoeol(s_slave->wins[WIN_MAIN]);
+			wattrset(s_slave->wins[WIN_MAIN], A_BOLD);
+			wattron(s_slave->wins[WIN_MAIN], COLOR_PAIR(1));
+			wprintw(s_slave->wins[WIN_MAIN], ">> %s + %p\n", s_slave->fnt->name,
+					s_slave->fnt->sym && s_slave->regs.rip ? s_slave->regs.rip
+					- s_slave->fnt->sym->st_value : 0);
+			wattroff(s_slave->wins[WIN_MAIN], A_BOLD);
+			wattron(s_slave->wins[WIN_MAIN], COLOR_PAIR(1));
+			wrefresh(s_slave->wins[WIN_MAIN]);
+		}
 		dump_stack(s_slave->pid, &s_slave->old_regs, &s_slave->regs,
 				   s_slave->wins, sclean);
 		wrefresh(s_slave->wins[WIN_REGS]);
@@ -265,6 +301,7 @@ int				start_slave(char *path, char **cmd, char **environ,
 	s_slave->d_sbp = NULL;
 	memset(&s_slave->regs, 0, sizeof(s_slave->regs));
 	memset(&s_slave->old_regs, 0, sizeof(s_slave->old_regs));
+	s_slave->fnt = NULL;
 	dump_regs_name(s_slave->wins[WIN_REGS]);
 	refresh_exe_state(s_slave, 1);
 	wrefresh(s_slave->wins[WIN_REGS]);

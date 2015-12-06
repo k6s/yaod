@@ -312,6 +312,39 @@ t_tables_addr				*elf_tables(pid_t pid, struct link_map *link_map)
 	return (tables);
 }
 
+Elf64_Sym			*elf_addr_dynsym_sym(pid_t pid, struct link_map *link_map,
+						 t_tables_addr *s_tables, unsigned long sym_addr)
+{
+	size_t		i;
+	Elf64_Sym	*sym;
+
+	i = 0;
+	if (s_tables->nchains && s_tables->symtab)
+	{
+		while (i < *s_tables->nchains)
+		{
+			if (!(sym = get_data(pid, s_tables->symtab + i * sizeof(*sym),
+								 sizeof(*sym))))
+				return (NULL);
+			if (ELF64_ST_TYPE(sym->st_info) == STT_FUNC)
+			{
+				if (link_map->l_addr + sym->st_value == sym_addr)
+					return (sym);
+				else if (sym->st_size)
+				{
+					if (link_map->l_addr + sym->st_value <= sym_addr
+						&& link_map->l_addr + sym->st_value + sym->st_size
+						> sym_addr)
+						return (sym);
+				}
+			}
+			++i;
+		}
+	}
+	return (NULL);
+}
+
+
 u_char			*elf_addr_dynsym(pid_t pid, struct link_map *link_map,
 						 t_tables_addr *s_tables, unsigned long sym_addr)
 {

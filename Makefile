@@ -41,7 +41,8 @@ SRCS	= 		sh/main.c \
 				sbp.c \
 				cmd_hbp.c \
 				cmd_sbp.c \
-				slave_io.c
+				slave_io.c \
+				fnt.c
 OBJS	= $(addprefix obj/, $(SRCS:.c=.o))
 CFLAGS	+= -Wall -Wextra -ansi -lcurses -ggdb -std=gnu11
 LDFLAGS	+= -L lib/ -lmy -l capstone -lm -ldl

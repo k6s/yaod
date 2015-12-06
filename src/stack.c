@@ -138,7 +138,7 @@ void		clean_stack_step(WINDOW **wins, unsigned *hl, void *stack_frame)
 	wrefresh(wins[WIN_STACK]);
 	memset(hl, 0, sizeof(*hl) * MAX_STACK_FRAME * 2);
 	wmove(wins[WIN_MAIN], 1, 3);
-	wclrtoeol(wins[WIN_MAIN]);
+	wprintw(wins[WIN_MAIN], "%-50s", " ");
 	wrefresh(wins[WIN_MAIN]);
 }
 

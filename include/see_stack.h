@@ -50,6 +50,7 @@ typedef struct s_slave	t_slave;	/*! @brief typedef to @ref s_slave */
 typedef struct s_line	t_line;		/*! @brief typedef to @ref s_line */
 typedef struct s_hist	t_hist;		/*! @brief typedef to @ref s_hist */
 typedef struct s_sbp	t_sbp;	/*! @brief typedef to @ref s_sbreak */
+typedef struct s_fnt	t_fnt;
 
 # include <minishell1.h>
 
@@ -143,6 +144,28 @@ int							sbp_disable(t_slave *s_slave, t_sbp *sbp);
 int							sbp_enable(t_slave *s_slave, t_sbp *sbp);
 int							sbp_restore(t_slave *s_slave);
 
+# define SLAVE_EXIT			42
+# define SLAVE_BREAK		23
+
+int							hbp_disable(t_slave *s_slave, t_hbp *hbp);
+int							hbp_enable(t_slave *s_slave, t_hbp *hbp);
+
+# define FNT_DYN				0
+# define FNT_STA				1
+# define FNT_STA_NOSZ			2
+# define FNT_SHA				4
+
+struct							s_fnt
+{
+	char						*name;
+	Elf64_Sym					*sym;
+	t_fnt						*prv;
+	struct user_regs_struct		*regs;
+	unsigned char				*stack;
+	int							type;
+	long						end;
+};
+
 /*!
  * @brief Informations and memory content of a process.
  */
@@ -158,16 +181,11 @@ struct							s_slave
 	t_sbp						*d_sbp;		/*!< @brief Disabled soft breakpoints */
 	t_hbp						*e_hbp;
 	t_hbp						*d_hbp;
+	t_fnt						*fnt;
 	int							fdm;		/*!< @brief Master side of PTY */
 	int							fds;		/*!< @brief Slave side of PTY */
 	int							end;
 };
-
-# define SLAVE_EXIT			42
-# define SLAVE_BREAK		23
-
-int							hbp_disable(t_slave *s_slave, t_hbp *hbp);
-int							hbp_enable(t_slave *s_slave, t_hbp *hbp);
 
 /*
  ** GENERAL TERM STRUCT
