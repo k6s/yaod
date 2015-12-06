@@ -40,7 +40,7 @@ static WINDOW			**get_wins(void)
 	}
 	if (!(wins = malloc(sizeof(*wins) * NB_WINS)))
 		return (NULL);
-	if (!(wins[WIN_MAIN] = initscr()))
+	if (!(wins[WIN_SCR] = initscr()))
 		return (NULL);
 	if (!(wins[WIN_MAIN] = newwin(400, 400, 0, 0)))
 		return (NULL);
@@ -86,6 +86,16 @@ static void				set_wins_colors(WINDOW **wins)
 	wattron(wins[WIN_REGS], COLOR_PAIR(1));
 	wattron(wins[WIN_SH], COLOR_PAIR(1));
 	wattron(wins[WIN_CODE], COLOR_PAIR(1));
+}
+
+void					curses_close(WINDOW **wins)
+{
+	delwin(wins[WIN_MAIN]);
+	delwin(wins[WIN_STACK]);
+	delwin(wins[WIN_SH]);
+	delwin(wins[WIN_CODE]);
+	delwin(wins[WIN_REGS]);
+	delscreen((SCREEN *)wins[WIN_SCR]);
 }
 
 WINDOW					**curses_init(void)

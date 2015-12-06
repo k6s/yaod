@@ -75,7 +75,7 @@ enum			e_win_offset
 	WIN_STACK,		/*! @brief Stack window offset in windows array */
 	WIN_SH,			/*! @brief Shell window offset in windows array */
 	WIN_CODE,
-	WIN_OUT,
+	WIN_SCR,
 	NB_WINS
 };
 

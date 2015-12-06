@@ -10,7 +10,6 @@ void					elf_free_dyn(Elf64_Dyn **dyn)
 		i = 0;
 		while (dyn[i])
 			free(dyn[i++]);
-		free(dyn[i]);
 		free(dyn);
 	}
 }
@@ -25,8 +24,6 @@ void					elf_free_phdr(Elf64_Phdr **p_hdr)
 		i = 0;
 		while (p_hdr[i])
 			free(p_hdr[i++]);
-		++i;
-		free(p_hdr[i]);
 		free(p_hdr);
 	}
 }
@@ -41,8 +38,20 @@ void					elf_free_sym(Elf64_Sym **sym)
 		i = 0;
 		while (sym[i])
 			free(sym[i++]);
-		free(sym[i]);
 		free(sym);
+	}
+}
+
+void					elf_free_shdr(Elf64_Shdr **shdr)
+{
+	size_t				i;
+
+	i = 0;
+	if (shdr)
+	{
+		while (shdr[i])
+			free(shdr[i++]);
+		free(shdr);
 	}
 }
 
@@ -52,6 +61,12 @@ int						elf_free(t_elf *elf)
 	{
 		elf_free_dyn(elf->dyn);
 		elf_free_sym(elf->dynsym);
+		elf_free_sym(elf->symtab);
+		elf_free_phdr(elf->p_hdr);
+		elf_free_shdr(elf->s_hdr);
+		free(elf->strtab);
+		free(elf->shstrtab);
+		free(elf->dynstr);
 		free(elf->e_hdr);
 		free(elf);
 	}
