@@ -1,1 +1,1 @@
-still need to incorpore elf_shalib.c for static symbol from shared library resolution. Also need to check for jumps in code like it's done for ret / call instead of relying on symbol resolution
+Still need to incorporate elf_shalib.c to resolve static symbols from shared libs - function calls list is messed up and will be messed up until it's done. Also it would be better to check for jumps in code like it's done for call and ret instead of relying on symbols resolution and their (potentially missing) size.
