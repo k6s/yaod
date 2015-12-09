@@ -69,12 +69,14 @@ enum			e_win_offset
 	WIN_OSTACK,		/*! @brief Stack pad offset in windows array */
 	WIN_OSH,		/*! @brief Shell window offset in windows array */
 	WIN_OCODE,
+	WIN_OCALL,
 	WIN_OOUT,
 	WIN_MAIN,		/*! @brief Main window offset in windows array */
 	WIN_REGS,		/*! @brief Registry window offset in windows array */
 	WIN_STACK,		/*! @brief Stack window offset in windows array */
 	WIN_SH,			/*! @brief Shell window offset in windows array */
 	WIN_CODE,
+	WIN_CALL,
 	WIN_SCR,
 	NB_WINS
 };
@@ -95,8 +97,13 @@ enum			e_win_offset
 
 # define WIN_CODE_OX	WIN_BORDER_LEN * 3 + WIN_STACK_CO + WIN_REGS_CO
 # define WIN_CODE_OY	WIN_BORDER_LEN
-# define WIN_CODE_LI	40
+# define WIN_CODE_LI	WIN_REGS_LI
 # define WIN_CODE_CO	50
+
+# define WIN_CALL_OX	WIN_STACK_CO + WIN_BORDER_LEN * 2 
+# define WIN_CALL_OY	WIN_SH_OY
+# define WIN_CALL_LI	WIN_SH_LI
+# define WIN_CALL_CO	WIN_CODE_CO + WIN_REGS_CO
 
 /*!
  * @brief Register index in user_reg_struct.
@@ -155,7 +162,8 @@ int							hbp_enable(t_slave *s_slave, t_hbp *hbp);
 # define FNT_STA				1
 # define FNT_STA_NOSZ			2
 # define FNT_SHA				4
-# define FNT_PLT				8
+# define FNT_JMP				8
+# define FNT_PLT				(16 | FNT_JMP)
 
 struct							s_fnt
 {
@@ -166,6 +174,8 @@ struct							s_fnt
 	unsigned char				*stack;
 	int							type;
 	unsigned long				end;
+	unsigned long				rbp;
+	unsigned long				rip;
 };
 
 t_fnt						*fnt_new(pid_t pid, t_elf *elf, u_long addr);

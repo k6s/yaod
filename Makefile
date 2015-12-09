@@ -33,6 +33,7 @@ SRCS	= 		sh/main.c \
 				elf_parse.c \
 				elf_file.c \
 				elf_process.c \
+				elf_sha.c \
 				code.c \
 				print_mem.c \
 				showmem.c \

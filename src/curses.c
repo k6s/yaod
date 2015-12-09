@@ -5,6 +5,15 @@
  */
 #include <see_stack.h>
 
+void					call_refresh(WINDOW *win, int py, int px)
+{
+	touchwin(win);
+	prefresh(win, py, px,
+			 WIN_CALL_OY, WIN_CALL_OX, WIN_CALL_OY + WIN_CALL_LI,
+			 WIN_CALL_OX + WIN_CALL_CO);
+}
+
+
 void					code_refresh(WINDOW *win, int py, int px)
 {
 	touchwin(win);
@@ -58,6 +67,8 @@ static WINDOW			**get_wins(void)
 						   WIN_SH_OX); */
 	if (!(wins[WIN_CODE] = newpad(WIN_CODE_LI, WIN_CODE_CO)))
 		return (NULL);
+	if (!(wins[WIN_CALL] = newpad(WIN_CALL_LI, WIN_CALL_CO)))
+		return (NULL);
 /*	wins[WIN_OCODE] = subpad(wins[WIN_CODE], WIN_CODE_LI, WIN_CODE_CO,
 							 WIN_CODE_OY, WIN_CODE_OX); */
 	tcgetattr(0, &term);
@@ -94,6 +105,7 @@ void					curses_close(WINDOW **wins)
 	delwin(wins[WIN_STACK]);
 	delwin(wins[WIN_SH]);
 	delwin(wins[WIN_CODE]);
+	delwin(wins[WIN_CALL]);
 	delwin(wins[WIN_REGS]);
 	delscreen((SCREEN *)wins[WIN_SCR]);
 }

@@ -44,51 +44,41 @@ Elf64_Sym				*fnt_sym(Elf64_Sym **sym, unsigned long addr)
 	return (NULL);
 }
 
-int					fnt_shared_sym(pid_t pid, struct link_map *lm, u_long addr,
+int					fnt_shared_sym(pid_t pid, t_elf_sha *sha, u_long addr,
 								   t_fnt *fnt)
 {
-	t_tables_addr	*tables;
-
-	while (lm)
+	while (sha)
 	{
-		if ((tables = elf_tables(pid, lm)))
+		if (sha->dyntabs)
 		{
-			if ((fnt->sym = elf_addr_dynsym_sym(pid, lm, tables, addr)))
+			if ((fnt->sym = elf_addr_dynsym_sym(pid, sha->lm, sha->dyntabs, addr)))
 			{
 				fnt->type = FNT_SHA;
-				fnt->name = (char *)get_str(pid, tables->strtab
+				fnt->name = (char *)get_str(pid, sha->dyntabs->strtab
 											+ fnt->sym->st_name);
-				fnt->sym->st_value += lm->l_addr;
-				free(tables->nchains);
-				free(tables);
+				fnt->sym->st_value += sha->lm->l_addr;
 				return (0);
 			}
-			free(tables);
 		}
-		lm = lm->l_next;
+		sha = sha->nxt;
 	}
 	return (-1);
 }
 
-int					fnt_shared_sym_nosz(pid_t pid, struct link_map *lm,
+int					fnt_shared_sym_nosz(pid_t pid, t_elf_sha *sha,
 										long addr, t_fnt *fnt, long off)
 {
-	t_tables_addr	*tables;
-
-	while (lm)
+	while (sha)
 	{
-		if ((tables = elf_tables(pid, lm)))
+		if (sha->dyntabs)
 		{
-			if ((fnt->sym = elf_addr_dynsym_sym_nosz(pid, lm, tables, addr, off)))
+			if ((fnt->sym = elf_addr_dynsym_sym_nosz(pid, sha->lm, sha->dyntabs, addr, off)))
 			{
 				fnt->type = FNT_SHA;
-				fnt->name = get_str(pid, tables->strtab + fnt->sym->st_name);
-				free(tables->nchains);
-				free(tables);
+				fnt->name = get_str(pid, sha->dyntabs->strtab + fnt->sym->st_name);
 			}
-			free(tables);
 		}
-		lm = lm->l_next;
+		sha = sha->nxt;
 	}
 	return (fnt->type == FNT_SHA ? 0 : -1);
 }
@@ -133,7 +123,7 @@ Elf64_Sym			*fnt_nosz(pid_t pid, t_elf *elf, u_long addr, t_fnt *fnt)
 		new_sym = fnt_sym_nosz(elf->dynsym, &off, addr);
 	if (elf->link_map)
 	{
-		if (!fnt_shared_sym_nosz(pid, elf->link_map, addr, fnt, off))
+		if (!fnt_shared_sym_nosz(pid, elf->sha, addr, fnt, off))
 			return (fnt->sym);
 	}
 	if (new_sym)
@@ -194,8 +184,10 @@ t_fnt				*fnt_new(pid_t pid, t_elf *elf, u_long addr)
 		{
 			if (!(fnt->name = realloc(fnt->name, strlen(fnt->name) + 5)))
 				return (NULL);
+			fnt->name[strlen(fnt->name) + 4] = 0;
 			memcpy(fnt->name + strlen(fnt->name), "@plt", 4);
 			fnt->type = FNT_PLT;
+			fnt->end = fnt->sym->st_value + 16;
 		}
 		return (fnt);
 	}
@@ -210,7 +202,7 @@ t_fnt				*fnt_new(pid_t pid, t_elf *elf, u_long addr)
 		fnt->type = FNT_STA;
 	}
 	if (!fnt->sym && elf->link_map)
-		fnt_shared_sym(pid, elf->link_map, addr, fnt);
+		fnt_shared_sym(pid, elf->sha, addr, fnt);
 	if (!fnt->sym)
 		fnt->sym = fnt_nosz(pid, elf, addr, fnt);
 	if (fnt->sym)
