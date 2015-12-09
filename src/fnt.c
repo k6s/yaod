@@ -281,7 +281,8 @@ int				fnt_ret(pid_t pid, t_elf *elf, struct user_regs_struct *regs,
 			fnt_prev(fnt_lst);
 			while (*fnt_lst && ((*fnt_lst)->type & FNT_JMP))
 				fnt_prev(fnt_lst);
-			return (fnt_ret_sym(pid, elf, regs, fnt_lst));
+			return (0);
+ 			return (fnt_ret_sym(pid, elf, regs, fnt_lst));
 		}
 	}
 	return (1);

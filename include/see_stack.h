@@ -52,6 +52,7 @@ typedef struct s_line	t_line;		/*! @brief typedef to @ref s_line */
 typedef struct s_hist	t_hist;		/*! @brief typedef to @ref s_hist */
 typedef struct s_sbp	t_sbp;	/*! @brief typedef to @ref s_sbreak */
 typedef struct s_fnt	t_fnt;
+typedef struct s_win	t_win;
 
 # include <minishell1.h>
 
@@ -66,18 +67,18 @@ typedef struct s_fnt	t_fnt;
 
 enum			e_win_offset
 {
+	WIN_SH = 0,			/*! @brief Shell window offset in windows array */
+	WIN_STACK,		/*! @brief Stack window offset in windows array */
+	WIN_REGS,		/*! @brief Registry window offset in windows array */
+	WIN_CODE,
+	WIN_CALL,
+	WIN_SCR,
+	WIN_MAIN,		/*! @brief Main window offset in windows array */
 	WIN_OSTACK,		/*! @brief Stack pad offset in windows array */
 	WIN_OSH,		/*! @brief Shell window offset in windows array */
 	WIN_OCODE,
 	WIN_OCALL,
 	WIN_OOUT,
-	WIN_MAIN,		/*! @brief Main window offset in windows array */
-	WIN_REGS,		/*! @brief Registry window offset in windows array */
-	WIN_STACK,		/*! @brief Stack window offset in windows array */
-	WIN_SH,			/*! @brief Shell window offset in windows array */
-	WIN_CODE,
-	WIN_CALL,
-	WIN_SCR,
 	NB_WINS
 };
 
@@ -188,6 +189,14 @@ int				fnt_same(t_fnt **fnt_lst, t_fnt *fnt,
 int				fnt_call_jmp(pid_t pid, t_fnt **fnt_lst, t_fnt *fnt,
 							 unsigned long rip, unsigned long rbp);
 
+struct							s_win
+{
+	size_t						x;
+	size_t						y;
+	size_t						orig;
+	WINDOW						*win;
+};
+
 /*!
  * @brief Informations and memory content of a process.
  */
@@ -199,6 +208,8 @@ struct							s_slave
 	struct user_regs_struct		regs;		/*!< @brief registries content */
 	struct user_regs_struct		old_regs;	/*!< @brief previous registry content */
 	WINDOW						**wins;		/*!< @brief Windows curses id */
+	t_win						s_win[WIN_SCR];
+	unsigned					c_win;
 	t_sbp						*e_sbp;		/*!< @brief Enabled soft breakpoints */
 	t_sbp						*d_sbp;		/*!< @brief Disabled soft breakpoints */
 	t_hbp						*e_hbp;
@@ -235,7 +246,7 @@ struct						s_term
 									   t_slave *s_slave);
 
 
-WINDOW			**curses_init(void);
+WINDOW			**curses_init(t_win *wins);
 
 /*
  * update_slave_state.c

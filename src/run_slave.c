@@ -105,9 +105,9 @@ int								step_slave(t_slave *slave)
 	return (status);
 }
 
-void			update_elf(t_slave *s_slave)
+void							update_elf(t_slave *s_slave)
 {
-	size_t		i;
+	size_t						i;
 
 	if (!s_slave->elf)
 		s_slave->elf = elf_get(s_slave->pid, s_slave->filename);
@@ -343,6 +343,7 @@ int				start_slave(char *path, char **cmd, char **environ,
 	}
 	s_slave->e_sbp = NULL;
 	s_slave->d_sbp = NULL;
+	s_slave->c_win = 0;
 	memset(&s_slave->regs, 0, sizeof(s_slave->regs));
 	memset(&s_slave->old_regs, 0, sizeof(s_slave->old_regs));
 	s_slave->fnt = NULL;
@@ -357,7 +358,7 @@ WINDOW          **dump_stack_start(int argc, char **argv, char **environ,
 {
 	if (argc > 1)
 	{
-		if ((s_slave->wins = curses_init()))
+		if ((s_slave->wins = curses_init(s_slave->s_win)))
 		{
 			s_slave->filename = argv[1];
 			start_slave(argv[1], argv + 1, environ, s_slave);

@@ -5,6 +5,14 @@
  */
 #include <see_stack.h>
 
+void					stack_refresh(WINDOW *win, int py, int px)
+{
+	touchwin(win);
+	prefresh(win, py, px,
+			 WIN_CALL_OY, WIN_CALL_OX, WIN_CALL_OY + WIN_CALL_LI,
+			 WIN_CALL_OX + WIN_CALL_CO);
+}
+
 void					call_refresh(WINDOW *win, int py, int px)
 {
 	touchwin(win);
@@ -111,7 +119,19 @@ void					curses_close(WINDOW **wins)
 	delscreen((SCREEN *)wins[WIN_SCR]);
 }
 
-WINDOW					**curses_init(void)
+void					set_user_wins(t_win *s_wins, WINDOW **wins)
+{
+	size_t				i;
+
+	i = 0;
+	while (i < WIN_SCR)
+	{
+		s_wins[i].win = wins[i];
+		++i;
+	}
+}
+
+WINDOW					**curses_init(t_win *s_wins)
 {
 	WINDOW				**wins;
 
@@ -121,5 +141,6 @@ WINDOW					**curses_init(void)
 		return (NULL);
 	set_wins_attr(wins);
 	set_wins_colors(wins);
+	set_user_wins(s_wins, wins);
 	return (wins);
 }

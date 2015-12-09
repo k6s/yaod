@@ -134,6 +134,109 @@ int			cu_pdo(t_term *s_term)
 }
 */
 
+void			unborder(WINDOW *win)
+{
+	wborder(win, ' ', ' ', ' ', ' ', 0, 0, 0, 0);
+}
+
+
+int			edit_stack(t_term UN *s_term)
+{
+	char	c;
+	t_slave	*slave;
+
+	slave = &s_term->slave;
+	while ((c = getchar()))
+	{
+		if (c == K_TAB)
+		{
+			unborder(slave->wins[WIN_STACK]);
+			wrefresh(slave->wins[WIN_STACK]);
+			return (0);
+		}
+	}
+}
+
+int			edit_code(t_term UN *s_term)
+{
+	char	c;
+	t_slave	*slave;
+
+	slave = &s_term->slave;
+	code_refresh(slave->wins[WIN_CODE], 0, 0);
+	while ((c = getchar()))
+	{
+		if (c == K_TAB)
+		{
+			unborder(slave->wins[WIN_CODE]);
+			code_refresh(slave->wins[WIN_CODE], 0, 0);
+			return (0);
+		}
+	}
+}
+
+int			edit_regs(t_term UN *s_term)
+{
+	char	c;
+	t_slave	*slave;
+
+	slave = &s_term->slave;
+	while ((c = getchar()))
+	{
+		if (c == K_TAB)
+		{
+			unborder(slave->wins[WIN_REGS]);
+			wrefresh(slave->wins[WIN_REGS]);
+			return (0);
+		}
+	}
+}
+
+int			edit_call(t_term UN *s_term)
+{
+	char	c;
+	t_slave	*slave;
+
+	slave = &s_term->slave;
+	call_refresh(slave->wins[WIN_CALL], 0, 0);
+	while ((c = getchar()))
+	{
+		if (c == K_TAB)
+		{
+			unborder(slave->wins[WIN_CALL]);
+			call_refresh(slave->wins[WIN_CALL], 0, 0);
+			return (0);
+		}
+	}
+}
+
+int			cu_tab(t_term *s_term)
+{
+	char	c;
+	t_slave	*slave;
+	int		(*ft_wins[WIN_SCR])(t_term *) = {
+		[WIN_SH] = NULL,
+		[WIN_STACK] = &edit_stack,
+		[WIN_REGS] = &edit_regs,
+		[WIN_CODE] = &edit_code,
+		[WIN_CALL] = &edit_call
+	};
+
+	slave = &s_term->slave;
+	unborder(slave->wins[WIN_SH]);
+	sh_refresh(slave->wins[WIN_SH], 0, 0);
+	while (1)
+	{
+		slave->c_win = (slave->c_win + 1) % WIN_SCR;
+		wborder(slave->wins[slave->c_win], '|', '|', '-', '-', 0, 0, 0, 0);
+		wrefresh(slave->wins[slave->c_win]);
+		if (slave->c_win == WIN_SH)
+			return (0);
+		if (ft_wins[slave->c_win])
+			ft_wins[slave->c_win](s_term);
+	}
+}
+
 int			special_key(t_buff **s_buff, t_line *s_line, char *key,
 						t_term *s_term)
 {
@@ -143,23 +246,12 @@ int			special_key(t_buff **s_buff, t_line *s_line, char *key,
 		return (cu_right(s_buff, &s_line->line, s_term->slave.wins[WIN_SH]));
 	else if (key[0] == K_DEL)
 		return (cu_del(s_buff, &s_line->line, s_term->slave.wins[WIN_SH]));
-/*	else if (key[2] == K_UP)
-		return (cu_pup(s_term));
-	else if (key[2] == K_DO)
-		return (cu_pdo(s_term));
-	else if (key[0] == 27)
-		return (cu_cmd(s_term)); */
-/*	else if (key[2] == K_UP)
-		return (cu_up(s_buff, &s_line->line, &s_line->hist, s_term->slave.wins[WIN_SH]));
-	else if (key[2] == K_DO)
-		return (cu_do(s_buff, &s_line->line, &s_line->hist, s_term->slave.wins[WIN_SH])); */
-	else if (key[0] == 4)
-	{
-		clear_line(s_term->line);
-		s_term->end = 1;
-	}
+	else if (key[0] == K_TAB)
+		return (cu_tab(s_term));
 	else if (key[0] == 3)
 		kill(s_term->pid, SIGINT);
+	else if (key[0] == 4)
+		s_term->end = 1;
 	else if (key[0] == 13)
 		waddch(s_term->slave.wins[WIN_SH], '\n');
 	else

@@ -88,13 +88,8 @@ int			main(int argc, char **argv, char **environ)
 		wmove(s_term.slave.wins[WIN_SH], 0, 0);
 		s_term.c_win = WIN_SH;
 		if (init_mysh(&s_term, environ))
-			while (!s_term.end)
-			{
-				if (s_term.c_win == WIN_SH)
-					ret = shell_readloop(&s_term, wins);
-				else
-					ret = stack_readloop(&s_term, wins);
-			}
+		while (!s_term.end)
+			ret = shell_readloop(&s_term, wins);
 		free_stuff(&s_term);
 		endwin();
 	}
