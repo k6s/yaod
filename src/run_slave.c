@@ -143,46 +143,10 @@ void			fnt_print_call(WINDOW *win, t_fnt *fnt)
 	call_refresh(win, 0, 0);
 }
 
-int						fnt_call(pid_t pid, unsigned long rip)
-{
-	struct cs_insn		*ins;
-	int					ret;
-
-	ret = 1;
-	if (get_code(pid, rip, 1, &ins, NULL) == 1)
-	{
-		if (!memcmp(ins->mnemonic, "call", 4))
-			ret = 0;
-		free(ins);
-	}
-	return (ret);
-}
-
-int						fnt_ret(pid_t pid, unsigned long rip)
-{
-	struct cs_insn		*ins;
-	int					ret;
-
-	ret = 1;
-	if (get_code(pid, rip, 1, &ins, NULL) == 1)
-	{
-		/* retq */
-		if (ins->size == 1 && ins->bytes[0] == 0xc3)
-			ret = 0;
-		/* repz retq */
-		else if (ins->size == 2 && ins->bytes[0] == 0xf3 && ins->bytes[1] == 0xc3)
-			ret = 0;
-		free(ins);
-	}
-	return (ret);
-}
-
 int				update_func(pid_t pid, struct user_regs_struct *regs,
-							struct user_regs_struct *old_regs,
 							t_elf *elf, t_fnt **fnt_lst)
 {
 	t_fnt		*fnt;
-	t_fnt		*prv;
 
 	/*
 	 * Because STT_FUNC symbol size is actual end address | ~1, need to check
@@ -192,53 +156,13 @@ int				update_func(pid_t pid, struct user_regs_struct *regs,
 				 && regs && (regs->rip < (*fnt_lst)->sym->st_value
 					 || regs->rip >= (*fnt_lst)->end)))
 	{
-			/*
-			 * Previous symbol, previous function, rbp == old rbp
-			 */
-			if ((*fnt_lst) && (*fnt_lst)->prv && (*fnt_lst)->prv->sym)
-			{
-				if (!fnt_ret(pid, (*fnt_lst)->rip))
-				{
-					fnt_prev(fnt_lst);
-					fprintf(stderr, "PREV\n");
-					while (*fnt_lst && ((*fnt_lst)->type & FNT_JMP))
-						fnt_prev(fnt_lst);
-					return (1);
-				}
-			}
+			if (!fnt_ret(pid, fnt_lst))
+				return (1);
 			if (!(fnt = fnt_new(pid, elf, regs->rip)))
 				return (-1);
-			/*
-			 * Same symbole, same function.
-			 */
-			if (fnt->sym && (*fnt_lst) && (*fnt_lst)->sym)
-			{
-				if (fnt->sym->st_value == (*fnt_lst)->sym->st_value)
-				{
-					if (fnt->type == FNT_SHA || fnt->type == FNT_PLT)
-						free(fnt->sym);
-					free(fnt);
-					if (!(*fnt_lst)->sym->st_size)
-						(*fnt_lst)->end = regs->rip;
-					(*fnt_lst)->rbp = regs->rbp;
-					(*fnt_lst)->rip = regs->rip;
-					return (0);
-				}
-			}
-
-			/*
-			 * New symbol, new function
-			 */
-			if (!fnt || (!fnt->name && !(fnt->name = strdup("???"))))
-				return (-1);
-			if (fnt->sym)
-				fnt->end = fnt->sym->st_value + fnt->sym->st_size;
-			fnt->rbp = regs->rbp;
-			fnt->rip = regs->rip;
-			if (*fnt_lst && fnt_call(pid, (*fnt_lst)->rip))
-				fnt->type |= FNT_JMP;
-			fnt_push(fnt_lst, fnt);
-			return (0);
+			if (!(fnt_same(fnt_lst, fnt, regs->rip, regs->rbp)))
+				return (0);
+			return (fnt_call_jmp(pid, fnt_lst, fnt, regs->rip, regs->rbp));
 	}
 	if (*fnt_lst)
 	{
@@ -274,8 +198,8 @@ char            refresh_exe_state(t_slave *s_slave, char sclean)
 		}
 		dump_regs(&s_slave->old_regs, &s_slave->regs, s_slave->wins, 1);
 		wrefresh(s_slave->wins[WIN_REGS]);
-		if (update_func(s_slave->pid, &s_slave->regs, &s_slave->old_regs,
-					s_slave->elf, &s_slave->fnt) >= 0)
+		if (update_func(s_slave->pid, &s_slave->regs, s_slave->elf,
+						&s_slave->fnt) >= 0)
 		{
 			fnt_print_name(s_slave->wins[WIN_MAIN], s_slave->fnt->name,
 						   s_slave->fnt->sym ?

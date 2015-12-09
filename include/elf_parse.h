@@ -47,13 +47,23 @@ typedef struct s_tables_addr		t_tables_addr;
 struct							s_elf_sha
 {
 	struct link_map				*lm;
-	t_tables_addr				*dyntabs;
 	int							fd;
-	Elf64_Ehdr					e_hdr;
-	Elf64_Sym					*strtab;
-	Elf64_Sym					*symtab;
+	Elf64_Ehdr					*e_hdr;
+	t_tables_addr				*dyntabs;
+	t_tables_addr				*symtabs;
 	t_elf_sha					*nxt;
 };
+
+Elf64_Sym		*elf_sha_sym(int fd, t_tables_addr *tabs, long base, long addr);
+off_t			elf_sha_shstrtab(int fd, Elf64_Ehdr *e_hdr);
+Elf64_Ehdr		*elf_sha_ehdr(int fd);
+
+int				read_data(int fd, void *buff, off_t off, ssize_t len);
+char			*read_str(int fd, off_t addr);
+
+t_tables_addr	*elf_file_sha_tables(int fd, Elf64_Ehdr *e_hdr);
+
+t_elf_sha		*elf_sha(int pid, struct link_map *lm);
 
 /*!
  * \brief Symtab and strtab addresses and their associated nchains.

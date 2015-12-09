@@ -34,6 +34,7 @@ SRCS	= 		sh/main.c \
 				elf_file.c \
 				elf_process.c \
 				elf_sha.c \
+				elf_shalib.c \
 				code.c \
 				print_mem.c \
 				showmem.c \

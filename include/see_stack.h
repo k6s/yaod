@@ -178,7 +178,12 @@ struct							s_fnt
 	unsigned long				rip;
 };
 
-t_fnt						*fnt_new(pid_t pid, t_elf *elf, u_long addr);
+t_fnt			*fnt_new(pid_t pid, t_elf *elf, u_long addr);
+int				fnt_ret(pid_t pid, t_fnt **fnt_lst);
+int				fnt_same(t_fnt **fnt_lst, t_fnt *fnt,
+						 unsigned long rip, unsigned long rbp);
+int				fnt_call_jmp(pid_t pid, t_fnt **fnt_lst, t_fnt *fnt,
+							 unsigned long rip, unsigned long rbp);
 
 /*!
  * @brief Informations and memory content of a process.
@@ -286,6 +291,7 @@ void			my_perror(char *prog_name, char *msg);
 void			out_refresh(WINDOW *win, int py, int px);
 void			code_refresh(WINDOW *win, int py, int px);
 void			sh_refresh(WINDOW *win, int py, int px);
+void			call_refresh(WINDOW *win, int py, int px);
 int				showmem(WINDOW *win, unsigned char *str, int size, long base,
 						char ascii);
 

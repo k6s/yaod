@@ -17,7 +17,8 @@ void					fnt_prev(t_fnt **r)
 
 	fnt = *r;
 	*r = (*r)->prv;
-	free(fnt->sym);
+	if (fnt->type == FNT_PLT || fnt->type == FNT_SHA)
+		free(fnt->sym);
 	free(fnt);
 }
 
@@ -49,9 +50,10 @@ int					fnt_shared_sym(pid_t pid, t_elf_sha *sha, u_long addr,
 {
 	while (sha)
 	{
-		if (sha->dyntabs)
+		if (sha->dyntabs && addr > sha->lm->l_addr)
 		{
-			if ((fnt->sym = elf_addr_dynsym_sym(pid, sha->lm, sha->dyntabs, addr)))
+			if ((fnt->sym = elf_addr_dynsym_sym(pid, sha->lm, sha->dyntabs,
+												addr)))
 			{
 				fnt->type = FNT_SHA;
 				fnt->name = (char *)get_str(pid, sha->dyntabs->strtab
@@ -59,6 +61,13 @@ int					fnt_shared_sym(pid_t pid, t_elf_sha *sha, u_long addr,
 				fnt->sym->st_value += sha->lm->l_addr;
 				return (0);
 			}
+		}
+		if (sha->symtabs && (fnt->sym = elf_sha_sym(sha->fd, sha->symtabs,
+												   sha->lm->l_addr, addr)))
+		{
+			fnt->name = read_str(sha->fd,
+								 sha->symtabs->strtab + fnt->sym->st_name);
+			return (0);
 		}
 		sha = sha->nxt;
 	}
@@ -70,12 +79,14 @@ int					fnt_shared_sym_nosz(pid_t pid, t_elf_sha *sha,
 {
 	while (sha)
 	{
-		if (sha->dyntabs)
+		if (sha->dyntabs && addr > sha->lm->l_addr)
 		{
-			if ((fnt->sym = elf_addr_dynsym_sym_nosz(pid, sha->lm, sha->dyntabs, addr, off)))
+			if ((fnt->sym = elf_addr_dynsym_sym_nosz(pid, sha->lm, sha->dyntabs,
+													 addr, off)))
 			{
 				fnt->type = FNT_SHA;
-				fnt->name = get_str(pid, sha->dyntabs->strtab + fnt->sym->st_name);
+				fnt->name = get_str(pid, sha->dyntabs->strtab
+									+ fnt->sym->st_name);
 			}
 		}
 		sha = sha->nxt;
@@ -210,34 +221,89 @@ t_fnt				*fnt_new(pid_t pid, t_elf *elf, u_long addr)
 	return (fnt);
 }
 
-/*
-t_fnt					*fnt_new(pid_t pid, struct link_map *lm, long addr)
+static int				is_fnt_ret(pid_t pid, unsigned long rip)
 {
-	Elf64_Sym			*sym;
-	t_tables			*tables;
-	t_fnt				*fnt;
+	struct cs_insn		*ins;
+	int					ret;
 
-	sym = NULL;
-	tables = NULL;
-	fnt = NULL;
-	while (!sym && lm)
+	ret = 1;
+	if (get_code(pid, rip, 1, &ins, NULL) == 1)
 	{
-		free(tables);
-		if ((tables = elf_tables(pid, lm)))
+		/* retq */
+		if (ins->size == 1 && ins->bytes[0] == 0xc3)
+			ret = 0;
+		/* repz retq */
+		else if (ins->size == 2 && ins->bytes[0] == 0xf3
+				 && ins->bytes[1] == 0xc3)
+			ret = 0;
+		free(ins);
+	}
+	return (ret);
+}
+
+int				fnt_ret(pid_t pid, t_fnt **fnt_lst)
+{
+	if ((*fnt_lst) && (*fnt_lst)->prv && (*fnt_lst)->prv->sym)
+	{
+		if (!is_fnt_ret(pid, (*fnt_lst)->rip))
 		{
-			if (!(sym = elf_addr_dynsym_sym(pid, lm, tables, addr)))
-				lm = lm->nxt;
+			while (*fnt_lst && ((*fnt_lst)->type & FNT_JMP))
+				fnt_prev(fnt_lst);
+			fnt_prev(fnt_lst);
+			while (*fnt_lst && ((*fnt_lst)->type & FNT_JMP))
+				fnt_prev(fnt_lst);
+			return (0);
 		}
 	}
-	fnt = NULL;
-	if (sym)
-	{
-		if (!(fnt = malloc(sizeof(*fnt))))
-			return (NULL);
-		fnt->sym = sym;
-		fnt->name = get_str(pid, tables->strtab + sym->st_name);
-	}
-	free(tables);
-	return (fnt);
+	return (1);
 }
-*/
+
+int				fnt_same(t_fnt **fnt_lst, t_fnt *fnt, unsigned long rip,
+						  unsigned long rbp)
+{
+	if (fnt->sym && (*fnt_lst) && (*fnt_lst)->sym)
+	{
+		if (fnt->sym->st_value == (*fnt_lst)->sym->st_value)
+		{
+			if (fnt->type == FNT_SHA || fnt->type == FNT_PLT)
+				free(fnt->sym);
+			free(fnt);
+			if (!(*fnt_lst)->sym->st_size)
+				(*fnt_lst)->end = rip;
+			(*fnt_lst)->rbp = rbp;
+			(*fnt_lst)->rip = rip;
+			return (0);
+		}
+	}
+	return (1);
+}
+
+static int						fnt_call(pid_t pid, unsigned long rip)
+{
+	struct cs_insn		*ins;
+	int					ret;
+
+	ret = 1;
+	if (get_code(pid, rip, 1, &ins, NULL) == 1)
+	{
+		if (!memcmp(ins->mnemonic, "call", 4))
+			ret = 0;
+		free(ins);
+	}
+	return (ret);
+}
+
+int				fnt_call_jmp(pid_t pid, t_fnt **fnt_lst, t_fnt *fnt,
+							 unsigned long rip, unsigned long rbp)
+{
+	if (!fnt || (!fnt->name && !(fnt->name = strdup("???"))))
+		return (-1);
+	if (fnt->sym)
+		fnt->end = fnt->sym->st_value + fnt->sym->st_size;
+	fnt->rbp = rbp;
+	fnt->rip = rip;
+	if (*fnt_lst && fnt_call(pid, (*fnt_lst)->rip))
+		fnt->type |= FNT_JMP;
+	fnt_push(fnt_lst, fnt);
+	return (0);
+}

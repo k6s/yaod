@@ -82,7 +82,7 @@ Elf64_Sym			**elf_file_symtab(int fd, Elf64_Shdr *s_hdr)
 		if (!(sym[j] = malloc(sizeof(**sym))))
 				return (NULL);
 		if (read(fd, sym[j], sizeof(**sym)) != sizeof(**sym))
-		return (NULL);
+			return (NULL);
 		++j;
 	}
 	return (sym);

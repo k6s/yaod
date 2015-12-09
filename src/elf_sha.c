@@ -135,6 +135,15 @@ t_elf_sha			*elf_sha_new(int pid, struct link_map *lm)
 	sha->lm = lm;
 	sha->dyntabs = elf_sha_tables(pid, lm);
 	sha->fd = open(lm->l_name, O_RDONLY);
+	fprintf(stderr, "%s\n", lm->l_name);
+	if (!(sha->e_hdr = elf_sha_ehdr(sha->fd)))
+	{
+		sha->symtabs = NULL;
+		close(sha->fd);
+		sha->fd = -1;
+	}
+	else
+		sha->symtabs = elf_file_sha_tables(sha->fd, sha->e_hdr);
 	sha->nxt = NULL;
 	return (sha);
 }
