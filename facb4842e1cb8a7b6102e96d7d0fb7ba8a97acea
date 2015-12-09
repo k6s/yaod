@@ -1,0 +1,1 @@
+still need to incorpore elf_shalib.c for static symbol from shared library resolution. Also need to check for jumps in code like it's done for ret / call instead of relying on symbol resolution
