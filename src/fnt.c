@@ -1,5 +1,12 @@
 #include <see_stack.h>
 
+void					fnt_free(t_fnt *fnt)
+{
+	if (fnt->type == FNT_PLT || fnt->type == FNT_SHA)
+		free(fnt->sym);
+	free(fnt);
+}
+
 void					fnt_push(t_fnt **r, t_fnt *fnt)
 {
 	if (!*r)
@@ -151,7 +158,7 @@ Elf64_Sym			*fnt_nosz(pid_t pid, t_elf *elf, u_long addr, t_fnt *fnt)
 	else if (sym)
 	{
 		fnt->name = elf_symstr(elf->shstrtab, sym->st_name, elf->shstrsz);
-		fnt->type = FNT_STA_NOSZ | FNT_STA | FNT_LOC;
+		fnt->type = FNT_NOSZ | FNT_STA | FNT_LOC;
 		fnt->sym = sym;
 	}
 	return (new_sym ? new_sym : sym);
@@ -246,11 +253,25 @@ static int				is_fnt_ret(pid_t pid, unsigned long rip)
 	return (ret);
 }
 
-int				fnt_ret(pid_t pid, t_elf *elf, struct user_regs_struct *regs,
-						t_fnt **fnt_lst)
+static int		fnt_ret_sym(pid_t pid, t_elf *elf,
+							struct user_regs_struct *regs, t_fnt **fnt_lst)
 {
 	t_fnt		*fnt;
 
+	if (!(fnt = fnt_new(pid, elf, regs->rip)))
+		return (-1);
+	if (!*fnt_lst)
+		*fnt_lst = fnt;
+	else if ((*fnt_lst)->sym != fnt->sym)
+		fnt_push(fnt_lst, fnt);
+	else
+		fnt_free(fnt);
+	return (0);
+}
+
+int				fnt_ret(pid_t pid, t_elf *elf, struct user_regs_struct *regs,
+						t_fnt **fnt_lst)
+{
 	if ((*fnt_lst) && (*fnt_lst)->prv && (*fnt_lst)->prv->sym)
 	{
 		if (!is_fnt_ret(pid, (*fnt_lst)->rip))
@@ -260,15 +281,7 @@ int				fnt_ret(pid_t pid, t_elf *elf, struct user_regs_struct *regs,
 			fnt_prev(fnt_lst);
 			while (*fnt_lst && ((*fnt_lst)->type & FNT_JMP))
 				fnt_prev(fnt_lst);
-			if (!(fnt = fnt_new(pid, elf, regs->rip)))
-				return (-1);
-			if (!*fnt_lst)
-				*fnt_lst = fnt;
-			else if ((*fnt_lst)->sym != fnt->sym)
-				fnt_push(fnt_lst, fnt);
-			else
-				free(fnt);
-			return (0);
+			return (fnt_ret_sym(pid, elf, regs, fnt_lst));
 		}
 	}
 	return (1);
@@ -281,9 +294,7 @@ int				fnt_same(t_fnt **fnt_lst, t_fnt *fnt, unsigned long rip,
 	{
 		if (fnt->sym->st_value == (*fnt_lst)->sym->st_value)
 		{
-			if (fnt->type == FNT_SHA || fnt->type == FNT_PLT)
-				free(fnt->sym);
-			free(fnt);
+			fnt_free(fnt);
 			if (!(*fnt_lst)->sym->st_size)
 				(*fnt_lst)->end = rip;
 			(*fnt_lst)->rbp = rbp;

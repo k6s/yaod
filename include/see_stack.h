@@ -100,7 +100,7 @@ enum			e_win_offset
 # define WIN_CODE_LI	WIN_REGS_LI
 # define WIN_CODE_CO	50
 
-# define WIN_CALL_OX	WIN_STACK_CO + WIN_BORDER_LEN * 2 
+# define WIN_CALL_OX	WIN_STACK_CO + WIN_BORDER_LEN * 3
 # define WIN_CALL_OY	WIN_SH_OY
 # define WIN_CALL_LI	WIN_SH_LI
 # define WIN_CALL_CO	WIN_CODE_CO + WIN_REGS_CO
@@ -161,7 +161,7 @@ int							hbp_enable(t_slave *s_slave, t_hbp *hbp);
 # define FNT_LOC				1
 # define FNT_DYN				2
 # define FNT_STA				4
-# define FNT_STA_NOSZ			8
+# define FNT_NOSZ				8
 # define FNT_SHA				16
 # define FNT_JMP				32
 # define FNT_PLT				(64 | FNT_JMP)

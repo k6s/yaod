@@ -61,10 +61,14 @@ int			stack_readloop(t_term *s_term, WINDOW **wins)
 
 void		welcome_user(WINDOW *win)
 {
+	wattrset(win, A_BOLD);
 	wattron(win, COLOR_PAIR(3));
 	wmove(win, WIN_SH_OY - 2, 30);
 	wprintw(win, "<<< Welcome to YAOD >>>");
+	wmove(win, WIN_SH_OY - 2, WIN_CALL_OX + WIN_BORDER_LEN);
+	wprintw(win, ">>> Calls / Jumps list <<<");
 	wrefresh(win);
+	wattroff(win, A_BOLD);
 	wattron(win, COLOR_PAIR(1));
 }
 
