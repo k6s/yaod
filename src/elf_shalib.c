@@ -60,13 +60,43 @@ off_t					elf_sha_shstrtab(int fd, Elf64_Ehdr *e_hdr)
 	return (sh_strtab.sh_offset);
 }
 
+void					free_tables_addr(t_tables_addr *tables)
+{
+	free(tables->nchains);
+	free(tables);
+}
+
+static int			sha_tables_new_sym(int fd, Elf64_Ehdr *e_hdr, off_t shstrtab,
+									   size_t i, t_tables_addr *tables)
+{
+	Elf64_Shdr		cur;
+	char			*name;
+
+	if (lseek(fd, e_hdr->e_shoff + e_hdr->e_shentsize * i, SEEK_SET) < 0)
+		return (-1);
+	if (read(fd, &cur, e_hdr->e_shentsize) != e_hdr->e_shentsize)
+		return (-1);
+	switch (cur.sh_type)
+	{
+	 case (SHT_SYMTAB):
+		 tables->symtab = cur.sh_offset;
+		 *tables->nchains = cur.sh_size / cur.sh_entsize;
+		 break ;
+	 case (SHT_STRTAB):
+		 if ((name = read_str(fd, cur.sh_name + shstrtab))
+			 && !strncmp(name, ".strtab", 8))
+		 tables->strtab = cur.sh_offset;
+		 free(name);
+		 break ;
+	}
+	return (0);
+}
+
 t_tables_addr			*elf_file_sha_tables(int fd, Elf64_Ehdr *e_hdr)
 {
-	Elf64_Shdr			*cur;
 	t_tables_addr		*tables;
 	off_t				shstrtab;
 	size_t				i;
-	char				*name;
 
 	if (!(tables = malloc(sizeof(*tables))))
 		return (NULL);
@@ -78,40 +108,25 @@ t_tables_addr			*elf_file_sha_tables(int fd, Elf64_Ehdr *e_hdr)
 	if (lseek(fd, e_hdr->e_shoff, SEEK_SET) < 0)
 		return (NULL);
 	i = 0;
-	cur = NULL;
-	while (i < e_hdr->e_shnum)/* && (!tables->symtab || !tables->strtab)) */
+	while (i < e_hdr->e_shnum && (!tables->symtab || !tables->strtab))
 	{
-		if (!cur && !(cur = malloc(sizeof(*cur))))
-			return (NULL);
-	if (lseek(fd, e_hdr->e_shoff + e_hdr->e_shentsize * i, SEEK_SET) < 0)
-		return (NULL);
-		if (read(fd, cur, e_hdr->e_shentsize) != e_hdr->e_shentsize)
-			return (NULL);
-		switch (cur->sh_type)
+		if (sha_tables_new_sym(fd, e_hdr, shstrtab, i, tables))
 		{
-		 case (SHT_SYMTAB):
-			 tables->symtab = cur->sh_offset;
-			 *tables->nchains = cur->sh_size / cur->sh_entsize;
-			 break ;
-		 case (SHT_STRTAB):
-			 if ((name = read_str(fd, cur->sh_name + shstrtab))
-				 && !strncmp(name, ".strtab", 8))
-				 tables->strtab = cur->sh_offset;
-			 free(name);
-			 break ;
+			free_tables_addr(tables);
+			return (NULL);
 		}
 		++i;
 	}
 	if (!tables->symtab)
 	{
-		free(tables->nchains);
-		free(tables);
+		free_tables_addr(tables);
 		tables = NULL;
 	}
 	return (tables);
 }
 
-Elf64_Sym		*elf_sha_sym(int fd, t_tables_addr *tabs, long base, long addr)
+Elf64_Sym		*elf_sha_sym(int fd, t_tables_addr *tabs, unsigned long base,
+							 unsigned long addr)
 {
 	size_t		i;
 	Elf64_Sym	*sym;
@@ -135,26 +150,3 @@ Elf64_Sym		*elf_sha_sym(int fd, t_tables_addr *tabs, long base, long addr)
 	free(sym);
 	return (NULL);
 }
-
-/*
-Elf64_Sym		*elf_sha_static(struct link_map *lm, long addr)
-{
-	char		*pathname;
-	int			fd;
-	Elf64_Ehdr	*e_hdr;
-	Elf64_Shdr	**s_hdr;
-	Elf64_Sym	*sym;
-
-		if ((fd = open(lm->l_name, O_RDONLY)) < 0)
-			return (NULL);
-		if (!(s_hdr = elf_sha_sta_tables(fd, e_hdr)))
-		{
-			close(fd);
-			free(e_hdr);
-			return (NULL);
-		}
-		sym = elf_sha_sym(fd, s_hdr[0], lm->l_addr, addr);
-			name = read_str(fd, s_hdr[1]->sh_offset + sym->st_name);
-	return (sym);
-}
-*/

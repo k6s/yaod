@@ -158,12 +158,14 @@ int							sbp_restore(t_slave *s_slave);
 int							hbp_disable(t_slave *s_slave, t_hbp *hbp);
 int							hbp_enable(t_slave *s_slave, t_hbp *hbp);
 
-# define FNT_DYN				0
-# define FNT_STA				1
-# define FNT_STA_NOSZ			2
-# define FNT_SHA				4
-# define FNT_JMP				8
-# define FNT_PLT				(16 | FNT_JMP)
+# define FNT_LOC				1
+# define FNT_DYN				2
+# define FNT_STA				4
+# define FNT_STA_NOSZ			8
+# define FNT_SHA				16
+# define FNT_JMP				32
+# define FNT_PLT				(64 | FNT_JMP)
+# define FNT_SHA_STA			(FNT_SHA | FNT_STA)
 
 struct							s_fnt
 {
@@ -179,7 +181,8 @@ struct							s_fnt
 };
 
 t_fnt			*fnt_new(pid_t pid, t_elf *elf, u_long addr);
-int				fnt_ret(pid_t pid, t_fnt **fnt_lst);
+int				fnt_ret(pid_t pid, t_elf *elf, struct user_regs_struct *regs,
+						t_fnt **fnt_lst);
 int				fnt_same(t_fnt **fnt_lst, t_fnt *fnt,
 						 unsigned long rip, unsigned long rbp);
 int				fnt_call_jmp(pid_t pid, t_fnt **fnt_lst, t_fnt *fnt,

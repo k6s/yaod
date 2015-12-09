@@ -54,7 +54,8 @@ struct							s_elf_sha
 	t_elf_sha					*nxt;
 };
 
-Elf64_Sym		*elf_sha_sym(int fd, t_tables_addr *tabs, long base, long addr);
+Elf64_Sym		*elf_sha_sym(int fd, t_tables_addr *tabs, unsigned long base,
+							 unsigned long addr);
 off_t			elf_sha_shstrtab(int fd, Elf64_Ehdr *e_hdr);
 Elf64_Ehdr		*elf_sha_ehdr(int fd);
 

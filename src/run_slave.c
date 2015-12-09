@@ -136,9 +136,22 @@ void			fnt_print_call(WINDOW *win, t_fnt *fnt)
 	wclrtobot(win);
 	while (fnt)
 	{
-		wprintw(win, "%-20s @ 0x%-12llx -> 0x%-12llx\n", fnt->name, fnt->sym
-				? fnt->sym->st_value : 0, fnt->end);
+		if (!(fnt->type & FNT_DYN))
+			wattrset(win, A_BOLD);
+		if (fnt->type & FNT_SHA)
+			wattron(win, COLOR_PAIR(1));
+		else
+			wattron(win, COLOR_PAIR(5));
+		wprintw(win, "%-30s @ ", fnt->name);
+		wattron(win, COLOR_PAIR(1));
+		wprintw(win, "0x%-12llx", fnt->sym ? fnt->sym->st_value : 0);
+		if (!(fnt->type & FNT_SHA))
+			wattron(win, COLOR_PAIR(5));
+		wprintw(win, " -> ");
+		wattron(win, COLOR_PAIR(1));
+		wprintw(win, "0x%-12llx\n", fnt->end);
 		fnt = fnt->prv;
+		wattroff(win, A_BOLD);
 	}
 	call_refresh(win, 0, 0);
 }
@@ -156,7 +169,7 @@ int				update_func(pid_t pid, struct user_regs_struct *regs,
 				 && regs && (regs->rip < (*fnt_lst)->sym->st_value
 					 || regs->rip >= (*fnt_lst)->end)))
 	{
-			if (!fnt_ret(pid, fnt_lst))
+			if (!fnt_ret(pid, elf, regs, fnt_lst))
 				return (1);
 			if (!(fnt = fnt_new(pid, elf, regs->rip)))
 				return (-1);
@@ -199,7 +212,7 @@ char            refresh_exe_state(t_slave *s_slave, char sclean)
 		dump_regs(&s_slave->old_regs, &s_slave->regs, s_slave->wins, 1);
 		wrefresh(s_slave->wins[WIN_REGS]);
 		if (update_func(s_slave->pid, &s_slave->regs, s_slave->elf,
-						&s_slave->fnt) >= 0)
+						&s_slave->fnt) >= 0 && s_slave->fnt)
 		{
 			fnt_print_name(s_slave->wins[WIN_MAIN], s_slave->fnt->name,
 						   s_slave->fnt->sym ?

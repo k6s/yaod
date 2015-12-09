@@ -92,6 +92,7 @@ static void				set_wins_colors(WINDOW **wins)
 	init_pair(2, COLOR_RED, -1);
 	init_pair(3, COLOR_CYAN, -1);
 	init_pair(4, COLOR_YELLOW, -1);
+	init_pair(5, COLOR_GREEN, -1);
 	wattron(wins[WIN_STACK], COLOR_PAIR(1));
 	wattron(wins[WIN_OSTACK], COLOR_PAIR(1));
 	wattron(wins[WIN_REGS], COLOR_PAIR(1));
