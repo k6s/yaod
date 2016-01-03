@@ -91,9 +91,9 @@ int							new_sbp(t_term *s_term, char **av)
 	t_sbp					*sbp;	
 	int						ret;
 
+	s_slave = &s_term->slave;
 	if (av[1])
 	{
-		s_slave = &s_term->slave;
 		if (!(sbp = malloc(sizeof(*sbp))))
 			return (-1);
 		memset(sbp, 0, sizeof(*sbp));
@@ -112,6 +112,6 @@ at %p\n", (void *)sbp->addr);
 		}
 	}
 	waddstr(s_slave->wins[WIN_SH], "\t[X] Need an address to break at.\n");
-	sh_refresh(s_term->slave.wins[WIN_SH], 0, 0);
+	sh_refresh(s_slave->wins[WIN_SH], 0, 0);
 	return (1);
 }

@@ -139,22 +139,78 @@ void			unborder(WINDOW *win)
 	wborder(win, ' ', ' ', ' ', ' ', 0, 0, 0, 0);
 }
 
+void			munborder(WINDOW *win, int x, int y, int len_x, int len_y)
+{
+	wmove(win, y, x);
+	whline(win, ' ', len_x);
+	wmove(win, y + 1, x);
+	wvline(win, ' ', len_y);
+	wmove(win, y + 1, x + len_x);
+	wvline(win, ' ', len_y);
+	wmove(win, y + len_y, x);
+	whline(win, ' ', len_x);
+}
+
+void			mborder(WINDOW *win, int x, int y, int len_x, int len_y)
+{
+	wmove(win, y, x);
+	whline(win, '_', len_x);
+	wmove(win, y + 1, x);
+/*	wvline(win, '|', len_y);
+	wmove(win, y + 1, x + len_x);
+	wvline(win, '|', len_y); */
+	wmove(win, y + len_y, x);
+	whline(win, '_', len_x);
+}
+
+int			cu_up(WINDOW *win, int *x, int *y,
+				  void (*ft_refresh)(WINDOW *, int, int))
+{
+	if (*y > 0)
+	{
+		ft_refresh(win, *y - 1, *x);
+		--(*y);
+	}
+}
+
+int			cu_do(WINDOW *win, int *x, int *y,
+				  void (*ft_refresh)(WINDOW *, int, int))
+{
+	ft_refresh(win, *y + 1, *x);
+	++(*y);
+}
 
 int			edit_stack(t_term UN *s_term)
 {
 	char	c;
 	t_slave	*slave;
+	int		x;
+	int		y;
 
+	x = 0;
+	y = 0;
 	slave = &s_term->slave;
+	mborder(s_term->slave.wins[WIN_MAIN], 1, 2, WIN_STACK_CO,
+			WIN_STACK_LI);
+	wrefresh(s_term->slave.wins[WIN_MAIN]);
+	stack_refresh(s_term->slave.wins[WIN_STACK], x, y);
+	wrefresh(slave->wins[WIN_STACK]);
 	while ((c = getchar()))
 	{
 		if (c == K_TAB)
 		{
-			unborder(slave->wins[WIN_STACK]);
-			wrefresh(slave->wins[WIN_STACK]);
+			munborder(s_term->slave.wins[WIN_MAIN], 1, 2, WIN_STACK_CO,
+					  WIN_STACK_LI);
+			wrefresh(slave->wins[WIN_MAIN]);
+			stack_refresh(s_term->slave.wins[WIN_STACK], y, x);
 			return (0);
 		}
+		else if (c == K_UP)
+			cu_up(s_term->slave.wins[WIN_STACK], &x, &y, &stack_refresh);
+		else if (c == K_DO)
+			cu_do(s_term->slave.wins[WIN_STACK], &x, &y, &stack_refresh);
 	}
+	return (-1);
 }
 
 int			edit_code(t_term UN *s_term)
@@ -164,32 +220,46 @@ int			edit_code(t_term UN *s_term)
 
 	slave = &s_term->slave;
 	code_refresh(slave->wins[WIN_CODE], 0, 0);
+	mborder(s_term->slave.wins[WIN_MAIN], WIN_CODE_OX - 1, WIN_CODE_OY - 1,
+			WIN_CODE_CO + 1, WIN_CODE_LI + 1);
+	wrefresh(s_term->slave.wins[WIN_MAIN]);
+	code_refresh(slave->wins[WIN_CODE], 0, 0);
 	while ((c = getchar()))
 	{
 		if (c == K_TAB)
 		{
-			unborder(slave->wins[WIN_CODE]);
+			munborder(s_term->slave.wins[WIN_MAIN], WIN_CODE_OX - 1,
+					  WIN_CODE_OY - 1, WIN_CODE_CO + 1, WIN_CODE_LI + 1);
+			wrefresh(s_term->slave.wins[WIN_MAIN]);
 			code_refresh(slave->wins[WIN_CODE], 0, 0);
 			return (0);
 		}
 	}
+	return (-1);
 }
 
-int			edit_regs(t_term UN *s_term)
+int			edit_regs(t_term *s_term)
 {
 	char	c;
 	t_slave	*slave;
 
 	slave = &s_term->slave;
+	mborder(slave->wins[WIN_MAIN], WIN_REGS_OX - 2, WIN_REGS_OY - 1,
+			WIN_REGS_CO + 3, WIN_REGS_LI + 1);
+	wrefresh(slave->wins[WIN_MAIN]);
+	wrefresh(slave->wins[WIN_REGS]);
 	while ((c = getchar()))
 	{
 		if (c == K_TAB)
 		{
-			unborder(slave->wins[WIN_REGS]);
+			munborder(slave->wins[WIN_MAIN], WIN_REGS_OX - 2, WIN_REGS_OY - 1,
+					WIN_REGS_CO + 3, WIN_REGS_LI + 1);
+			wrefresh(slave->wins[WIN_MAIN]);
 			wrefresh(slave->wins[WIN_REGS]);
 			return (0);
 		}
 	}
+	return (-1);
 }
 
 int			edit_call(t_term UN *s_term)
@@ -198,21 +268,26 @@ int			edit_call(t_term UN *s_term)
 	t_slave	*slave;
 
 	slave = &s_term->slave;
+	mborder(slave->wins[WIN_MAIN], WIN_CALL_OX - 1, WIN_CALL_OY - 1,
+			WIN_CALL_CO + 1, WIN_CALL_LI + 1);
+	wrefresh(slave->wins[WIN_MAIN]);
 	call_refresh(slave->wins[WIN_CALL], 0, 0);
 	while ((c = getchar()))
 	{
 		if (c == K_TAB)
 		{
-			unborder(slave->wins[WIN_CALL]);
+			munborder(slave->wins[WIN_MAIN], WIN_CALL_OX - 1, WIN_CALL_OY - 1,
+					WIN_CALL_CO + 1, WIN_CALL_LI + 1);
+			wrefresh(slave->wins[WIN_MAIN]);
 			call_refresh(slave->wins[WIN_CALL], 0, 0);
 			return (0);
 		}
 	}
+	return (-1);
 }
 
 int			cu_tab(t_term *s_term)
 {
-	char	c;
 	t_slave	*slave;
 	int		(*ft_wins[WIN_SCR])(t_term *) = {
 		[WIN_SH] = NULL,
@@ -223,15 +298,21 @@ int			cu_tab(t_term *s_term)
 	};
 
 	slave = &s_term->slave;
-	unborder(slave->wins[WIN_SH]);
+	munborder(slave->wins[WIN_MAIN], WIN_SH_OX - 1, WIN_SH_OY - 1,
+			WIN_SH_CO + 1, WIN_SH_LI + 1);
+	wrefresh(slave->wins[WIN_MAIN]);
 	sh_refresh(slave->wins[WIN_SH], 0, 0);
 	while (1)
 	{
 		slave->c_win = (slave->c_win + 1) % WIN_SCR;
-		wborder(slave->wins[slave->c_win], '|', '|', '-', '-', 0, 0, 0, 0);
-		wrefresh(slave->wins[slave->c_win]);
 		if (slave->c_win == WIN_SH)
+		{
+			mborder(slave->wins[WIN_MAIN], WIN_SH_OX - 1, WIN_SH_OY - 1,
+					  WIN_SH_CO + 1, WIN_SH_LI + 1);
+			wrefresh(slave->wins[WIN_MAIN]);
+			sh_refresh(slave->wins[WIN_SH], 0, 0);
 			return (0);
+		}
 		if (ft_wins[slave->c_win])
 			ft_wins[slave->c_win](s_term);
 	}
@@ -254,7 +335,5 @@ int			special_key(t_buff **s_buff, t_line *s_line, char *key,
 		s_term->end = 1;
 	else if (key[0] == 13)
 		waddch(s_term->slave.wins[WIN_SH], '\n');
-	else
-		wprintw(s_term->slave.wins[WIN_SH], "%d\n", key[0]);
 	return (0);
 }

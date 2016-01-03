@@ -88,44 +88,28 @@ Elf64_Sym			**elf_file_symtab(int fd, Elf64_Shdr *s_hdr)
 	return (sym);
 }
 
-char				*elf_file_shstrtab(int fd, Elf64_Shdr **s_hdr, char *strtab,
-									   Elf64_Xword sstrsz, Elf64_Xword *size)
+char			*elf_file_shstrtab(int fd, Elf64_Shdr **s_hdr, char *shstrtab,
+								   Elf64_Xword shstrsz, Elf64_Xword *size)
 {
-	char			*shstrtab;
-	size_t			i;
-	char			*symname;
-
-	i = 0 ;
-	while (s_hdr[i])
+	char		*strtab;
+	size_t		i;
+	Elf64_Shdr	*strtab_shdr;
+		
+	if ((strtab_shdr = elf_shdr_name(s_hdr, SHT_STRTAB, ".strtab", shstrtab,
+									shstrsz)))
 	{
-		symname = NULL;
-		if (s_hdr[i]->sh_type == SHT_STRTAB
-			&& (symname = elf_symstr(strtab, s_hdr[i]->sh_name, sstrsz))
-			&& !strncmp(symname, ".strtab", 10))
-		{
-			free(symname);
-			break;
-		}
-		else
-		{
-			free(symname);
-			++i;
-		}
-	}
-	if (s_hdr[i])
-	{
-		*size = s_hdr[i]->sh_size;
-		if (!(shstrtab = malloc(sizeof(*shstrtab) * *size)))
+		*size = strtab_shdr->sh_size;
+		if (!(strtab = malloc(sizeof(*strtab) * *size)))
 			return (NULL);
-		if (lseek(fd, s_hdr[i]->sh_offset, SEEK_SET) == -1)
+		if (lseek(fd, strtab_shdr->sh_offset, SEEK_SET) == -1)
 			return (NULL);
-		if (read(fd, shstrtab, *size) != (ssize_t)*size)
+		if (read(fd, strtab, *size) != (ssize_t)*size)
 		{
-			free(shstrtab);
+			free(strtab);
 			return (NULL);
 		}
 	}
-	return (shstrtab);
+	return (strtab);
 }
 
 

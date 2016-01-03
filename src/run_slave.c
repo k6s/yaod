@@ -108,25 +108,24 @@ int								step_slave(t_slave *slave)
 void							update_elf(t_slave *s_slave)
 {
 	size_t						i;
+	t_elf						*elf;
 
-	if (!s_slave->elf)
-		s_slave->elf = elf_get(s_slave->pid, s_slave->filename);
-	if (s_slave->elf && s_slave->elf->dyn && !(s_slave->elf->link_map))
+	if (!(elf = s_slave->elf))
+		elf = elf_get(s_slave->pid, s_slave->filename);
+	if (elf && elf->dyn && !(elf->link_map))
 	{
 		i = 0;
-		while (s_slave->elf->dyn[i] && s_slave->elf->dyn[i]->d_tag != DT_PLTGOT)
+		while (elf->dyn[i] && elf->dyn[i]->d_tag != DT_PLTGOT)
 			++i;
-		if (s_slave->elf->dyn[i])
+		if (elf->dyn[i])
 		{
-			if ((s_slave->elf->link_map
-				= elf_linkmap(s_slave->pid, s_slave->elf->dyn[i])))
-				s_slave->elf->sha = elf_sha(s_slave->pid, s_slave->elf->link_map);
+			if ((elf->link_map = elf_linkmap(s_slave->pid, elf->dyn[i])))
+				elf->sha = elf_sha(s_slave->pid, elf->link_map);
 		}
 	}
-	if (!s_slave->elf->linked)
-		elf_populate_dynsym(s_slave->pid, s_slave->elf->link_map,
-					s_slave->elf->dynsym, s_slave->elf->dynstr,
-					s_slave->elf->strsz);
+	if (elf && !elf->linked)
+		elf->linked = elf_populate_dynsym(s_slave->pid, elf->link_map,
+			  elf->dynsym, elf->dynstr, elf->strsz);
 }
 
 void			fnt_print_call(WINDOW *win, t_fnt *fnt)
@@ -162,7 +161,7 @@ int				update_func(pid_t pid, struct user_regs_struct *regs,
 	t_fnt		*fnt;
 
 	/*
-	 * Because STT_FUNC symbol size is actual end address | ~1, need to check
+	 * Because STT_FUNC symbol size is actual end address ^ 1, need to check
 	 * for function change when rip == end too.
 	 */
 	if (!*fnt_lst || !(*fnt_lst)->sym || (*fnt_lst && (*fnt_lst)->sym
@@ -182,10 +181,11 @@ int				update_func(pid_t pid, struct user_regs_struct *regs,
 		(*fnt_lst)->rbp = regs->rbp;
 		(*fnt_lst)->rip = regs->rip;
 	}
-	return (0);
+	return (1);
 }
 
-void			fnt_print_name(WINDOW *win, char *name, unsigned long offset)
+void				fnt_print_name(WINDOW *win, char *name,
+								   unsigned long offset)
 {
 	wmove(win, 1, WIN_CODE_OX);
 	wclrtoeol(win);
@@ -197,40 +197,49 @@ void			fnt_print_name(WINDOW *win, char *name, unsigned long offset)
 	wrefresh(win);
 }
 
+void				dump_slave_state(t_slave *slave)
+{
+	off_t			off;
 
-char            refresh_exe_state(t_slave *s_slave, char sclean)
+	if (slave->pid > -1)
+	{
+		dump_regs(&slave->old_regs, &slave->regs, slave->wins, 1);
+		wrefresh(slave->wins[WIN_REGS]);
+		if (slave->ins && slave->n_ins > 0)
+			dump_code(slave->wins[WIN_CODE], slave->ins, slave->n_ins);
+		if (slave->fnt)
+		{
+			off = 0;
+			if (slave->fnt->sym)
+				off = slave->regs.rip - slave->fnt->sym->st_value;
+			fnt_print_name(slave->wins[WIN_MAIN], slave->fnt->name, off);
+			fnt_print_call(slave->wins[WIN_CALL], slave->fnt);
+		}
+	}
+}
+
+int		            update_slave_state(t_slave *s_slave, char sclean)
 {
 	if (s_slave->pid > -1)
 	{
 		update_elf(s_slave);
-		memcpy(&s_slave->old_regs, &s_slave->regs, sizeof(s_slave->old_regs));
-		if (ptrace(PTRACE_GETREGS, s_slave->pid, NULL, &s_slave->regs))
-		{
-			memcpy(&s_slave->regs, &s_slave->old_regs, sizeof(s_slave->regs));
-		/*	return (-1); */
-		}
-		dump_regs(&s_slave->old_regs, &s_slave->regs, s_slave->wins, 1);
-		wrefresh(s_slave->wins[WIN_REGS]);
-		if (update_func(s_slave->pid, &s_slave->regs, s_slave->elf,
-						&s_slave->fnt) >= 0 && s_slave->fnt)
-		{
-			fnt_print_name(s_slave->wins[WIN_MAIN], s_slave->fnt->name,
-						   s_slave->fnt->sym ?
-						   s_slave->regs.rip - s_slave->fnt->sym->st_value : 0);
-			fnt_print_call(s_slave->wins[WIN_CALL], s_slave->fnt);
-		}
+		update_regs(s_slave->pid, &s_slave->regs, &s_slave->old_regs);
+		update_func(s_slave->pid, &s_slave->regs, s_slave->elf,
+						&s_slave->fnt);
 		dump_stack(s_slave->pid, &s_slave->old_regs, &s_slave->regs,
 				   s_slave->wins, sclean);
-		wrefresh(s_slave->wins[WIN_REGS]);
-		sh_refresh(s_slave->wins[WIN_SH], 0, 0);
-		update_code(s_slave);
+		free(s_slave->ins);
+		s_slave->ins = NULL;
+		s_slave->n_ins = get_code(s_slave->pid, s_slave->regs.rip, 10,
+								  &s_slave->ins, s_slave->e_sbp);
+		dump_slave_state(s_slave);
 	}
 	return (0);
 }
 
 static int		breaked_update(t_term *s_term)
 {
-	if (refresh_exe_state(&s_term->slave, 0) == -2)
+	if (update_slave_state(&s_term->slave, 0) == -2)
 		kill(s_term->slave.pid, SIGKILL);
 	return (0);
 }
@@ -240,7 +249,7 @@ int				take_step(t_term *s_term, int (*exe_nxt)(t_slave * ))
 	int			status;
 
 	status = exe_nxt(&s_term->slave);
-	if (refresh_exe_state(&s_term->slave, 1) == -2)
+	if (update_slave_state(&s_term->slave, 1) == -2)
 	{
 		wprintw(s_term->slave.wins[WIN_SH], "Slave killed: shit happened\n");
 		kill(s_term->slave.pid, SIGKILL);
@@ -320,6 +329,7 @@ int				start_slave(char *path, char **cmd, char **environ,
 {
 	int			status;
 
+	s_slave->filename = path;
 	if (open_pty(s_slave))
 		return (-1); 
 	if ((s_slave->pid = ptrace_exec(path, cmd, environ, s_slave->fds,
@@ -335,35 +345,13 @@ int				start_slave(char *path, char **cmd, char **environ,
 	}
 	if (WIFEXITED(status))
 	{
-		wmove(s_slave->wins[WIN_MAIN], 1, 3);
-		wprintw(s_slave->wins[WIN_MAIN],
+		wprintw(s_slave->wins[WIN_SH],
 				"%s won't be enslaved: can't execute it\n", path);
-		wrefresh(s_slave->wins[WIN_MAIN]);
+		wrefresh(s_slave->wins[WIN_SH]);
 		return (slave_exit(s_slave->wins[WIN_SH], s_slave));
 	}
-	s_slave->e_sbp = NULL;
-	s_slave->d_sbp = NULL;
-	s_slave->c_win = 0;
-	memset(&s_slave->regs, 0, sizeof(s_slave->regs));
-	memset(&s_slave->old_regs, 0, sizeof(s_slave->old_regs));
-	s_slave->fnt = NULL;
 	dump_regs_name(s_slave->wins[WIN_REGS]);
-	refresh_exe_state(s_slave, 1);
+	update_slave_state(s_slave, 1);
 	wrefresh(s_slave->wins[WIN_REGS]);
 	return (slave_status(status, s_slave->wins[WIN_SH], s_slave));
-}
-
-WINDOW          **dump_stack_start(int argc, char **argv, char **environ,
-								   t_slave *s_slave)
-{
-	if (argc > 1)
-	{
-		if ((s_slave->wins = curses_init(s_slave->s_win)))
-		{
-			s_slave->filename = argv[1];
-			start_slave(argv[1], argv + 1, environ, s_slave);
-		}
-		return (s_slave->wins);
-	}
-	return (NULL);
 }

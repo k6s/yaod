@@ -84,16 +84,18 @@ enum			e_win_offset
 
 # define ADDR_PLEN		13
 
-# define WIN_STACK_CO   81				/*! @brief stack window colums */
+# define WIN_STACK_CO   80				/*! @brief stack window colums */
 # define WIN_STACK_LI	WIN_REGS_LI		/*! @brief stack window lines */
 # define WIN_OSTACK_LI	999
 
+# define WIN_REGS_OX	WIN_BORDER_LEN + WIN_STACK_CO
+# define WIN_REGS_OY	WIN_BORDER_LEN
 # define WIN_REGS_CO	22				/*! @brief registry window columns */
 # define WIN_REGS_LI	27				/*! @brief registry window lines */
 
 # define WIN_SH_OX		WIN_BORDER_LEN
 # define WIN_SH_OY		WIN_STACK_LI + WIN_BORDER_LEN * 2
-# define WIN_SH_CO		70				/*! @brief shell window columns */
+# define WIN_SH_CO		WIN_STACK_CO	/*! @brief shell window columns */
 # define WIN_SH_LI		15				/*! @brief shell window lines */
 
 # define WIN_CODE_OX	WIN_BORDER_LEN * 3 + WIN_STACK_CO + WIN_REGS_CO
@@ -166,6 +168,7 @@ int							hbp_enable(t_slave *s_slave, t_hbp *hbp);
 # define FNT_SHA				16
 # define FNT_JMP				32
 # define FNT_PLT				(64 | FNT_JMP)
+# define FNT_UNKNOWN			128
 # define FNT_SHA_STA			(FNT_SHA | FNT_STA)
 
 struct							s_fnt
@@ -205,6 +208,8 @@ struct							s_slave
 	char						*filename;
 	t_elf						*elf;		/*!< @brief ELF process info */
 	pid_t		                pid;		/*!< @brief Process ID */
+	struct cs_insn				*ins;
+	int							n_ins;
 	struct user_regs_struct		regs;		/*!< @brief registries content */
 	struct user_regs_struct		old_regs;	/*!< @brief previous registry content */
 	WINDOW						**wins;		/*!< @brief Windows curses id */
@@ -284,6 +289,8 @@ void			update_var(WINDOW *win, char *var, size_t off,
 	void			dump_regs(struct user_regs_struct *old_regs,
 							  struct user_regs_struct *regs, WINDOW **wins,
 							  char refresh);
+	int				update_regs(pid_t pid, struct user_regs_struct *regs,
+								struct user_regs_struct *old_regs);
 
 /*
  * ouput.c
@@ -313,8 +320,6 @@ int				showmem(WINDOW *win, unsigned char *str, int size, long base,
  * color_output.c
  * ==============
  */
-void			addrhl(WINDOW *win, size_t var_len, size_t x, size_t y,
-					   char *reg);
 void			restore_color(WINDOW *win, size_t x, size_t y, long addr,
 							  long end);
 void			strhl(WINDOW *win, size_t var_len, size_t x, size_t y,
@@ -333,7 +338,7 @@ int				ptrace_exec(char *path, char **cmd, char **environ, int fd_s,
 							int fdm);
 int				step_slave(t_slave *slave);
 int				cont_slave(t_slave *slave);
-char			refresh_exe_state(t_slave *s_slave, char sclean);
+int				update_slave_state(t_slave *s_slave, char sclean);
 
 /*
  * code.c

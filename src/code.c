@@ -3,28 +3,35 @@
 #include <ptrace_get.h>
 #include <math.h>
 
-int					get_code_bef(pid_t pid, unsigned long rip, int max_ins,
-								 struct cs_insn **ins, t_sbp *sbp)
+static int			get_ins(csh handle, unsigned long *rip, unsigned char *data,
+							t_sbp *p, cs_insn *ins, int max_ins)
 {
-	int				n_ins;
 	int				n;
-	struct cs_insn	*t;
-	unsigned long	rrip;
+	int				n_ins;
+	struct cs_insn	*tmp;
+	int				j;
 
-	n_ins = max_ins;
-	if (!(*ins = malloc(sizeof(**ins) * max_ins)))
-		return (-1);
-	while (n_ins)
+	n_ins = 0;
+	n = -1;
+	while (p)
 	{
-		rrip = rip - sizeof((*ins)->bytes);
-		if ((n = get_code(pid, rrip, sizeof((*ins)->bytes), &t, sbp)) < 1)
-			return (max_ins - n_ins);
-		rip -= (&t[n - 1])->size;
-		--n_ins;
-		memcpy(&((*ins)[n_ins]), t + n - 1, sizeof(*t));
-		free(t);
+		if (!p->current && p->addr >= *rip && p->addr < *rip + 16)
+			data[p->addr - *rip] = (p->saved & (unsigned)0xff);
+		p = p->nxt;
 	}
-	return (max_ins - n_ins);
+	if ((n = cs_disasm(handle, data, 16, *rip, 0, &tmp)) > 0)
+	{
+		j = 0;
+		while (j < n && (j + n_ins) < max_ins)
+		{
+			memcpy(&(ins[j]), &(tmp[j]), sizeof(*ins));
+			*rip += tmp[j].size;
+			++j;
+		}
+		n_ins += n;
+		free(tmp);
+	}
+	return (n_ins);
 }
 
 int					get_code(pid_t pid, unsigned long rip, int max_ins,
@@ -32,13 +39,9 @@ int					get_code(pid_t pid, unsigned long rip, int max_ins,
 {
 	int				n_ins;
 	unsigned char	*data;
-	struct cs_insn	*tmp;
 	int				n;
 	csh				handle;
 	unsigned long	s_rip;
-	int				j;
-	t_sbp			*p;
-
 
 	*ins = NULL;
 	if (cs_open(CS_ARCH_X86, CS_MODE_64, &handle) != CS_ERR_OK)
@@ -50,40 +53,21 @@ int					get_code(pid_t pid, unsigned long rip, int max_ins,
 	}
 	n_ins = 0;
 	s_rip = rip;
-	while (n_ins < max_ins)
+	n = 1;
+	while (n_ins < max_ins && n > 0)
 	{
-		if (!(data = get_data(pid, rip, 16)))
+		if (!(data = get_data(pid, s_rip, 16)))
 			break ;
-		p = sbp;
-		while (p)
-		{
-			if (!p->current && p->addr >= rip && p->addr < rip + 16)
-				data[p->addr - rip] = (p->saved & (unsigned)0xff);
-			p = p->nxt;
-		}
-		if ((n = cs_disasm(handle, data, 16, s_rip, 0, &tmp)) > 0)
-		{
-			j = 0;
-			while (j < n && (j + n_ins) < max_ins)
-			{
-				memcpy(&((*ins)[n_ins + j]), &(tmp[j]), sizeof(**ins));
-				rip += tmp[j].size;
-				++j;
-			}
+		if ((n = get_ins(handle, &s_rip, data, sbp,
+						 &((*ins)[n_ins]), max_ins - n_ins)) > 0)
 			n_ins += n;
-			free(tmp);
-		}
-		else
-		{
-			free(data);
-			break ;
-		}
 		free(data);
 	}
-	if (!n_ins)
+	if (!n_ins || n < 0)
 	{
 		free(*ins);
 		*ins = NULL;
+		n_ins = -1;
 	}
 	cs_close(&handle);
 	return (n_ins < max_ins ? n_ins : max_ins);
@@ -114,43 +98,22 @@ void				print_ins(WINDOW *win, struct cs_insn *ins, char bold)
 	wattroff(win, A_BOLD);
 }
 
-int					update_code(t_slave *s_slave)
+int					dump_code(WINDOW *win, struct cs_insn *ins,
+								int n_ins)
 {
-	struct cs_insn	*ins;
-	int				n_ins;
 	int				i;
-	unsigned long	rrip;
 
-	rrip = s_slave->regs.rip;
-	/*
-	if ((n_ins = get_code_bef(s_slave->pid, s_slave->regs.rip, 4, &ins,
-						  s_slave->e_sbp)) > 0)
+	wmove(win, 0, 0);
+	wclrtobot(win);
+	i = 0;
+	while (i < n_ins)
 	{
-		i = 0 + 5 - n_ins;
-		while (i < n_ins)
-		{
-			print_ins(s_slave->wins[WIN_CODE], ins + i, 0);
-			++i;
-		}
-		code_refresh(s_slave->wins[WIN_CODE], 0, 0);
+		if (!i)
+			print_ins(win, ins + i, 1);
+		else
+			print_ins(win, ins + i, 0);
+		++i;
 	}
-	*/
-	wmove(s_slave->wins[WIN_CODE], 0, 0);
-	wclrtobot(s_slave->wins[WIN_CODE]);
-	if ((n_ins = get_code(s_slave->pid, rrip, 10, &ins,
-						  s_slave->e_sbp)) > 0)
-	{
-		i = 0;
-		while (i < n_ins)
-		{
-			if (!i)
-				print_ins(s_slave->wins[WIN_CODE], ins + i, 1);
-			else
-				print_ins(s_slave->wins[WIN_CODE], ins + i, 0);
-			++i;
-		}
-		code_refresh(s_slave->wins[WIN_CODE], 0, 0);
-	}
-	free(ins);
+	code_refresh(win, 0, 0);
 	return (0);
 }

@@ -30,35 +30,6 @@ int			init_mysh(t_term *s_term, char **environ)
 	return (0);
 }
 
-int			stack_readloop(t_term *s_term, WINDOW **wins)
-{
-	char	k;
-
-	box(wins[WIN_STACK], '|', '-');
-	while (s_term->c_win == WIN_OSTACK)
-	{
-		k = fgetc(stdin);
-		if (k == K_UP)
-			wmove(wins[WIN_STACK], getcury(wins[WIN_STACK]) + 1, getcurx(wins[WIN_STACK]));
-		else if (k == K_DO)
-			wmove(wins[WIN_STACK], getcury(wins[WIN_STACK]) - 1, getcurx(wins[WIN_STACK]));
-		else if (k == K_ESC)
-		{
-			while (k != K_ESC)
-			{
-				k = fgetc(stdin);
-				if (k == K_TAB)
-					s_term->c_win = (s_term->c_win + 1) % (WIN_SH + 1);
-			}
-		}
-		prefresh(wins[WIN_STACK], getcury(wins[WIN_STACK]),
-				 getcurx(wins[WIN_STACK]), WIN_BORDER_LEN, WIN_BORDER_LEN,
-				 WIN_STACK_LI, WIN_STACK_CO);
-	}
-	box(wins[WIN_STACK], ' ', ' ');
-	return (0);
-}
-
 void		welcome_user(WINDOW *win)
 {
 	wattrset(win, A_BOLD);
@@ -82,8 +53,10 @@ int			main(int argc, char **argv, char **environ)
 	{
 		ret = -1;
 		my_bzero((void *)(&s_term), sizeof(s_term));
-		if (!(wins = dump_stack_start(argc, argv, environ, &s_term.slave)))
+		if (!(s_term.slave.wins = curses_init(s_term.slave.s_win)))
 			return (-1);
+		wins = s_term.slave.wins;
+		start_slave(argv[1], argv + 1, environ, &s_term.slave);
 		welcome_user(wins[WIN_MAIN]);
 		wmove(s_term.slave.wins[WIN_SH], 0, 0);
 		s_term.c_win = WIN_SH;

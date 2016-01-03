@@ -20,7 +20,6 @@ void							*get_data(pid_t pid, unsigned long addr,
 		{
 			errno = 0;
 			data[j++] = ptrace(PTRACE_PEEKTEXT, pid, addr + i, NULL);
-			/* if (errno && data[j - 1] == ~((unsigned)0)) */
 			if (errno)
 			{
 				free(data);
@@ -45,11 +44,16 @@ u_char							*get_str(pid_t pid, unsigned long addr)
 	{
 		if (!(s = realloc(s, i + sizeof(*word))))
 			return (NULL);
+		free(word);
 		if (!(word = get_data(pid, addr + i, sizeof(*word))))
+		{
+			free(s);
 			return (NULL);
+		}
 		strncpy((char *)(s + i), (const char *)word, sizeof(*word));
 		i += sizeof(*word);
 	}
+	free(word);
 	return (s);
 }
 

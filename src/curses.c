@@ -8,9 +8,8 @@
 void					stack_refresh(WINDOW *win, int py, int px)
 {
 	touchwin(win);
-	prefresh(win, py, px,
-			 WIN_CALL_OY, WIN_CALL_OX, WIN_CALL_OY + WIN_CALL_LI,
-			 WIN_CALL_OX + WIN_CALL_CO);
+	prefresh(win, py, px, WIN_BORDER_LEN, WIN_BORDER_LEN, WIN_STACK_LI,
+			 WIN_STACK_CO);
 }
 
 void					call_refresh(WINDOW *win, int py, int px)
@@ -49,9 +48,9 @@ static WINDOW			**get_wins(void)
 		fprintf(stderr, "Cannot get winsize, abort...\n");
 		return (NULL);
 	}
-	if (size.ws_row < 100 && size.ws_col < 165)
+	if (size.ws_row < 52 || size.ws_col < 170)
 	{
-		fprintf(stderr, "More place pls. (%dx%d vs 100x165)\n", size.ws_row,
+		fprintf(stderr, "More place pls. (%dx%d vs 52x170)\n", size.ws_row,
 				size.ws_col);
 		return (NULL);
 	}

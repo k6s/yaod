@@ -27,7 +27,6 @@ SRCS	= 		sh/main.c \
 				ptrace_get.c \
 				stack.c \
 				regs.c \
-				color_output.c \
 				run_slave.c \
 				bp.c \
 				elf_parse.c \
@@ -39,12 +38,14 @@ SRCS	= 		sh/main.c \
 				print_mem.c \
 				showmem.c \
 				cmd_infos.c \
-				hbp.c \
-				sbp.c \
+				cmd_help.c \
 				cmd_hbp.c \
 				cmd_sbp.c \
+				hbp.c \
+				sbp.c \
 				slave_io.c \
-				fnt.c
+				fnt.c \
+				unstrip.c
 OBJS	= $(addprefix obj/, $(SRCS:.c=.o))
 CFLAGS	+= -Wall -Wextra -ansi -lcurses -ggdb -std=gnu11
 LDFLAGS	+= -L lib/ -lmy -l capstone -lm -ldl

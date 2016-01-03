@@ -63,7 +63,7 @@ void			free_fnt(t_fnt *fnt)
 	{
 		t = fnt;
 		free(fnt->name);
-		if (fnt->type == FNT_SHA || fnt->type == FNT_PLT)
+		if ((fnt->type & FNT_SHA) || (fnt->type & FNT_UNKNOWN))
 			free(fnt->sym);
 		fnt = fnt->prv;
 		free(t);
@@ -78,6 +78,7 @@ void			free_stuff(t_term *s_term)
 	free_sbp(s_term->slave.d_sbp);
 	free_strtab(s_term->environ);
 	free_fnt(s_term->slave.fnt);
+	free(s_term->slave.ins);
 	elf_free(s_term->slave.elf);
 	curses_close(s_term->slave.wins);
 	free(s_term->line);

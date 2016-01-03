@@ -1,5 +1,24 @@
 #include <elf_parse.h>
 
+static int				set_tables_addr(pid_t pid, Elf64_Dyn *dyn,
+										t_tables_addr *tables)
+{
+	if (dyn->d_tag == DT_SYMTAB)
+		tables->symtab = dyn->d_un.d_ptr;
+	else if (dyn->d_tag == DT_STRTAB)
+		tables->strtab = dyn->d_un.d_ptr;
+	else if (dyn->d_tag == DT_HASH)
+	{
+		if ((tables->nchains
+			 = get_data(pid, dyn->d_un.d_ptr + sizeof(Elf64_Word),
+						sizeof(Elf64_Word))))
+			*tables->nchains = (Elf64_Word)*tables->nchains;
+	}
+	else
+		return (-1);
+	return (tables->symtab && tables->strtab && tables->nchains ? 0 : -1);
+}
+
 t_tables_addr			*elf_sha_tables(pid_t pid, struct link_map *link_map)
 {
 	t_tables_addr		*tables;
@@ -14,22 +33,17 @@ t_tables_addr			*elf_sha_tables(pid_t pid, struct link_map *link_map)
 	{
 		while (dyn->d_tag)
 		{
-			if (dyn->d_tag == DT_SYMTAB)
-				tables->symtab = dyn->d_un.d_ptr;
-			if (dyn->d_tag == DT_STRTAB)
-				tables->strtab = dyn->d_un.d_ptr;
-			if (dyn->d_tag == DT_HASH)
+			if (!set_tables_addr(pid, dyn, tables))
 			{
-				if ((tables->nchains
-					 = get_data(pid, dyn->d_un.d_ptr + sizeof(Elf64_Word),
-								sizeof(Elf64_Word))))
-					*tables->nchains = (Elf64_Word)*tables->nchains;
+				free(dyn);
+				return (tables);
 			}
-			free(dyn);
 			addr += sizeof(*dyn);
+			free(dyn);
 			if (!(dyn = get_data(pid, addr, sizeof(*dyn))))
 				return (NULL);
 		}
+		free(dyn);
 	}
 	return (tables);
 }
@@ -60,6 +74,7 @@ Elf64_Sym			*elf_addr_dynsym_sym(pid_t pid, struct link_map *link_map,
 						return (sym);
 				}
 			}
+			free(sym);
 			++i;
 		}
 	}
@@ -123,19 +138,19 @@ long					elf_dynsym_addr(pid_t pid, struct link_map *link_map,
 	return (ret);
 }
 
-
 t_elf_sha			*elf_sha_new(int pid, struct link_map *lm)
 {
 	t_elf_sha		*sha;
 
-	/* if (!(pathname = sha_get_pathname(lm->l_name)))
-		return (NULL); */
 	if (!(sha = malloc(sizeof(*sha))))
 		return (NULL);
 	sha->lm = lm;
+	if ((sha->fd = open(lm->l_name, O_RDONLY)) < 0)
+	{
+		free(sha);
+		return (NULL);
+	}
 	sha->dyntabs = elf_sha_tables(pid, lm);
-	sha->fd = open(lm->l_name, O_RDONLY);
-	fprintf(stderr, "%s\n", lm->l_name);
 	if (!(sha->e_hdr = elf_sha_ehdr(sha->fd)))
 	{
 		sha->symtabs = NULL;
@@ -228,14 +243,31 @@ Elf64_Sym			*elf_addr_dynsym_sym_nosz(pid_t pid,
 	return (ret_sym);
 }
 
+static u_long		get_dynsym(pid_t pid, struct link_map *l_map, char *name)
+{
+	unsigned long	val;
+	t_tables_addr	*tables;
+
+	val = 0;
+	while (l_map && !val)
+	{
+		if ((tables = elf_sha_tables(pid, l_map)))
+		{
+			val = elf_dynsym_addr(pid, l_map, tables, name);
+			free(tables->nchains);
+			free(tables);
+		}
+		l_map = l_map->l_next;
+	}
+	return (val);
+}
+
 int					elf_populate_dynsym(pid_t pid, struct link_map *link_map,
 										Elf64_Sym **dynsym, char *dynstr,
 										unsigned strsz)
 {
 	char			*name;
 	size_t			i;
-	struct link_map	*l_map;
-	t_tables_addr	*tables;
 	int				linked;
 
 	i = 0;
@@ -246,21 +278,10 @@ int					elf_populate_dynsym(pid_t pid, struct link_map *link_map,
 		{
 			if ((name = elf_symstr(dynstr, dynsym[i]->st_name, strsz)) && *name)
 			{
-				l_map = link_map;
-				while (l_map && (!dynsym[i]->st_value))
-				{
-					if ((tables = elf_sha_tables(pid, l_map)))
-					{
-						if ((dynsym[i]->st_value
-							= elf_dynsym_addr(pid, l_map, tables, name)))
-							linked = 1;
-						free(tables->nchains);
-						free(tables);
-					}
-					l_map = l_map->l_next;
-				}
-				free(name);
+				if ((dynsym[i]->st_value = get_dynsym(pid, link_map, name)))
+					linked = 1;
 			}
+			free(name);
 		}
 		++i;
 	}

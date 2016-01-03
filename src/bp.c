@@ -97,7 +97,7 @@ int							sbp_hdl(t_slave *s_slave, t_sbp *sbp)
 		ptrace(PTRACE_SETREGS, s_slave->pid, NULL, s_slave->regs);
 		wprintw(s_slave->wins[WIN_SH], "\t[+] Reached breakpoint at %p\n",
 				(void *)s_slave->regs.rip);
-		refresh_exe_state(s_slave, 0);
+		update_slave_state(s_slave, 0);
 		wrefresh(s_slave->wins[WIN_SH]);
 		sbp->current = BP_CURRENT;
 		return (sbp_disable(s_slave, sbp));

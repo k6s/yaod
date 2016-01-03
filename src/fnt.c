@@ -2,8 +2,9 @@
 
 void					fnt_free(t_fnt *fnt)
 {
-	if (fnt->type == FNT_PLT || fnt->type == FNT_SHA)
+	if (fnt->type & FNT_PLT || fnt->type & FNT_SHA || fnt->type & FNT_UNKNOWN)
 		free(fnt->sym);
+	free(fnt->name);
 	free(fnt);
 }
 
@@ -24,9 +25,18 @@ void					fnt_prev(t_fnt **r)
 
 	fnt = *r;
 	*r = (*r)->prv;
-	if (fnt->type == FNT_PLT || fnt->type == FNT_SHA)
+	if (fnt->type & FNT_SHA || fnt->type & FNT_UNKNOWN)
 		free(fnt->sym);
+	free(fnt->name);
 	free(fnt);
+}
+
+void					fnt_set(t_fnt *fnt, Elf64_Sym *sym, int type,
+								char *strtab, Elf64_Xword strsz)
+{
+	fnt->name = elf_symstr(strtab, sym->st_name, strsz);
+	fnt->type = type;
+	fnt->sym = sym;
 }
 
 Elf64_Sym				*fnt_sym(Elf64_Sym **sym, unsigned long addr)
@@ -132,36 +142,29 @@ Elf64_Sym			*fnt_sym_nosz(Elf64_Sym **symtab, u_long *off, u_long addr)
 	return (sym);
 }
 
-Elf64_Sym			*fnt_nosz(pid_t pid, t_elf *elf, u_long addr, t_fnt *fnt)
+t_fnt				*fnt_unknown(t_fnt *fnt, u_long rip)
 {
-	Elf64_Sym		*sym;
-	Elf64_Sym		*new_sym;
-	u_long			off;
+	if (!(fnt->sym = malloc(sizeof(*fnt->sym))))
+		return (NULL);
+	fnt->sym->st_value = rip;
+	fnt->sym->st_size = 0;
+	fnt->end = rip;
+	fnt->type = FNT_UNKNOWN;
+	return (fnt);
+}
 
-	sym = NULL;
-	off = LONG_MAX - 1;
-	if (elf->symtab)
-		sym = fnt_sym_nosz(elf->symtab, &off, addr);
-	if (elf->dynsym)
-		new_sym = fnt_sym_nosz(elf->dynsym, &off, addr);
-	if (elf->link_map)
+t_fnt				*fnt_set_plt(t_elf *elf, t_fnt *fnt)
+{
+	if ((fnt->name = elf_symstr(elf->dynstr, fnt->sym->st_name, elf->strsz)))
 	{
-		if (!fnt_shared_sym_nosz(pid, elf->sha, addr, fnt, off))
-			return (fnt->sym);
+		if (!(fnt->name = realloc(fnt->name, strlen(fnt->name) + 5)))
+			return (NULL);
+		fnt->name[strlen(fnt->name) + 4] = 0;
+		memcpy(fnt->name + strlen(fnt->name), "@plt", 4);
+		fnt->type = FNT_PLT | FNT_LOC;
+		fnt->end = fnt->sym->st_value + 16;
 	}
-	if (new_sym)
-	{
-		fnt->name = elf_symstr(elf->dynstr, new_sym->st_name, elf->strsz);
-		fnt->type = FNT_DYN | FNT_LOC;
-		fnt->sym = new_sym;
-	}
-	else if (sym)
-	{
-		fnt->name = elf_symstr(elf->shstrtab, sym->st_name, elf->shstrsz);
-		fnt->type = FNT_NOSZ | FNT_STA | FNT_LOC;
-		fnt->sym = sym;
-	}
-	return (new_sym ? new_sym : sym);
+	return (fnt);
 }
 
 Elf64_Sym			*fnt_plt_sym(t_elf *elf, u_long addr, u_long *end)
@@ -185,6 +188,7 @@ Elf64_Sym			*fnt_plt_sym(t_elf *elf, u_long addr, u_long *end)
 					return (NULL);
 				memcpy(sym, elf->dynsym[sym_idx], sizeof(Elf64_Sym));
 				sym->st_value = sh_plt->sh_addr + sym_idx * sh_plt->sh_entsize;
+				sym->st_size = 16;
 				return (sym);
 			}
 		}
@@ -192,9 +196,95 @@ Elf64_Sym			*fnt_plt_sym(t_elf *elf, u_long addr, u_long *end)
 	return (NULL);
 }
 
-t_fnt				*fnt_new(pid_t pid, t_elf *elf, u_long addr)
+
+int					is_fnt_local(t_elf *elf, u_long addr)
 {
-	t_fnt			*fnt;
+	Elf64_Shdr			*txt_shdr;
+
+	if ((txt_shdr = elf_shdr_name(elf->s_hdr, SHT_PROGBITS, ".text",
+								  elf->strtab, elf->strsz)))
+	{
+		if (addr < txt_shdr->sh_addr + txt_shdr->sh_size
+			&& addr >= txt_shdr->sh_addr)
+			return (0);
+	}
+	return (1);
+}
+
+Elf64_Sym			*fnt_stripped(t_fsym *fsym, u_long addr)
+{
+	Elf64_Sym		*sym;
+
+	sym = NULL;
+	while (fsym && fsym->addr < addr)
+		fsym = fsym->nxt;
+	if (fsym && fsym->prv)
+	{
+		if (!(sym = malloc(sizeof(*sym))))
+			return (NULL);
+		memset(sym, 0, sizeof(*sym));
+		sym->st_size = fsym->addr - fsym->prv->addr;
+		sym->st_value = fsym->prv->addr;
+	}
+	return (sym);
+}
+
+void				fnt_local(t_elf *elf, u_long addr, t_fnt *fnt)
+{
+	u_long			off;
+
+	off = LONG_MAX - 1;
+	if (!fnt->sym && elf->symtab && (fnt->sym = fnt_sym(elf->symtab, addr)))
+	{
+		fnt->name = elf_symstr(elf->shstrtab, fnt->sym->st_name, elf->shstrsz);
+		fnt->type = FNT_STA | FNT_LOC;
+	}
+	else if (!fnt->sym)
+		fnt->sym = fnt_stripped(elf->fsym, addr);
+	if (!fnt->sym && elf->symtab)
+	{
+		if ((fnt->sym = fnt_sym_nosz(elf->symtab, &off, addr)))
+			fnt_set(fnt, fnt->sym, FNT_STA | FNT_LOC, elf->shstrtab,
+					elf->shstrsz);
+	}
+}
+
+Elf64_Sym			*fnt_nosz(pid_t pid, t_elf *elf, u_long addr, t_fnt *fnt)
+{
+	Elf64_Sym		*sym;
+	u_long			off;
+
+	sym = NULL;
+	off = LONG_MAX - 1;
+	if (elf->dynsym)
+		sym = fnt_sym_nosz(elf->dynsym, &off, addr);
+	if (elf->link_map)
+	{
+		if (!fnt_shared_sym_nosz(pid, elf->sha, addr, fnt, off))
+			return (fnt->sym);
+	}
+	if (sym)
+		fnt_set(fnt, sym, FNT_DYN | FNT_LOC, elf->dynstr, elf->strsz);
+	return (sym);
+}
+
+void				fnt_extern(pid_t pid, t_elf *elf, u_long addr,
+							   t_fnt *fnt)
+{
+	if (!fnt->sym && elf->dynsym)
+	{
+		if ((fnt->sym = fnt_sym(elf->dynsym, addr)))
+			fnt_set(fnt, fnt->sym, FNT_DYN | FNT_LOC, elf->dynstr, elf->strsz);
+	}
+	if (!fnt->sym && elf->link_map)
+		fnt_shared_sym(pid, elf->sha, addr, fnt);
+	if (!fnt->sym)
+		fnt->sym = fnt_nosz(pid, elf, addr, fnt);
+}
+
+t_fnt					*fnt_new(pid_t pid, t_elf *elf, u_long addr)
+{
+	t_fnt				*fnt;
 
 	fnt = NULL;
 	if (!(fnt = malloc(sizeof(*fnt))))
@@ -202,34 +292,15 @@ t_fnt				*fnt_new(pid_t pid, t_elf *elf, u_long addr)
 	memset(fnt, 0, sizeof(*fnt));
 	if (elf->s_hdr && elf->dynsym
 		&& (fnt->sym = fnt_plt_sym(elf, addr, &fnt->end)))
-	{
-		if ((fnt->name = elf_symstr(elf->dynstr, fnt->sym->st_name, elf->strsz)))
-		{
-			if (!(fnt->name = realloc(fnt->name, strlen(fnt->name) + 5)))
-				return (NULL);
-			fnt->name[strlen(fnt->name) + 4] = 0;
-			memcpy(fnt->name + strlen(fnt->name), "@plt", 4);
-			fnt->type = FNT_PLT | FNT_LOC;
-			fnt->end = fnt->sym->st_value + 16;
-		}
-		return (fnt);
-	}
-	if (elf->dynsym && (fnt->sym = fnt_sym(elf->dynsym, addr)))
-	{
-		fnt->name = elf_symstr(elf->dynstr, fnt->sym->st_name, elf->strsz);
-		fnt->type = FNT_DYN | FNT_LOC;
-	}
-	if (!fnt->sym && elf->symtab && (fnt->sym = fnt_sym(elf->symtab, addr)))
-	{
-		fnt->name = elf_symstr(elf->shstrtab, fnt->sym->st_name, elf->shstrsz);
-		fnt->type = FNT_STA | FNT_LOC;
-	}
-	if (!fnt->sym && elf->link_map)
-		fnt_shared_sym(pid, elf->sha, addr, fnt);
-	if (!fnt->sym)
-		fnt->sym = fnt_nosz(pid, elf, addr, fnt);
+		return (fnt_set_plt(elf, fnt));
+	if (!is_fnt_local(elf, addr))
+		fnt_local(elf, addr, fnt);
+	else
+		fnt_extern(pid, elf, addr, fnt);
 	if (fnt->sym)
 		fnt->end = fnt->sym->st_value + fnt->sym->st_size;
+	else
+		fnt = fnt_unknown(fnt, addr);
 	return (fnt);
 }
 
@@ -262,7 +333,7 @@ static int		fnt_ret_sym(pid_t pid, t_elf *elf,
 		return (-1);
 	if (!*fnt_lst)
 		*fnt_lst = fnt;
-	else if ((*fnt_lst)->sym != fnt->sym)
+	else if ((*fnt_lst)->sym->st_value != fnt->sym->st_value)
 		fnt_push(fnt_lst, fnt);
 	else
 		fnt_free(fnt);
@@ -281,19 +352,20 @@ int				fnt_ret(pid_t pid, t_elf *elf, struct user_regs_struct *regs,
 			fnt_prev(fnt_lst);
 			while (*fnt_lst && ((*fnt_lst)->type & FNT_JMP))
 				fnt_prev(fnt_lst);
+/*			fnt_ret_sym(pid, elf, regs, fnt_lst); */
 			return (0);
- 			return (fnt_ret_sym(pid, elf, regs, fnt_lst));
 		}
 	}
 	return (1);
 }
 
-int				fnt_same(t_fnt **fnt_lst, t_fnt *fnt, unsigned long rip,
-						  unsigned long rbp)
+int					fnt_same(t_fnt **fnt_lst, t_fnt *fnt, unsigned long rip,
+							  unsigned long rbp)
 {
 	if (fnt->sym && (*fnt_lst) && (*fnt_lst)->sym)
 	{
-		if (fnt->sym->st_value == (*fnt_lst)->sym->st_value)
+		if ((fnt->sym->st_value == (*fnt_lst)->sym->st_value)
+			|| (fnt->type & FNT_UNKNOWN && (*fnt_lst)->type & FNT_UNKNOWN))
 		{
 			fnt_free(fnt);
 			if (!(*fnt_lst)->sym->st_size)
@@ -306,10 +378,10 @@ int				fnt_same(t_fnt **fnt_lst, t_fnt *fnt, unsigned long rip,
 	return (1);
 }
 
-static int						fnt_call(pid_t pid, unsigned long rip)
+static int			fnt_call(pid_t pid, unsigned long rip)
 {
-	struct cs_insn		*ins;
-	int					ret;
+	struct cs_insn	*ins;
+	int				ret;
 
 	ret = 1;
 	if (get_code(pid, rip, 1, &ins, NULL) == 1)
@@ -321,8 +393,8 @@ static int						fnt_call(pid_t pid, unsigned long rip)
 	return (ret);
 }
 
-int				fnt_call_jmp(pid_t pid, t_fnt **fnt_lst, t_fnt *fnt,
-							 unsigned long rip, unsigned long rbp)
+int					fnt_call_jmp(pid_t pid, t_fnt **fnt_lst, t_fnt *fnt,
+								 unsigned long rip, unsigned long rbp)
 {
 	if (!fnt || (!fnt->name && !(fnt->name = strdup("???"))))
 		return (-1);

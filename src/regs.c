@@ -9,6 +9,12 @@
 */
 #include <see_stack.h>
 
+static void			           addrhl(WINDOW *win, size_t var_len, size_t x,
+									  size_t y, char *reg)
+{
+  print_addr(win, var_len, x, y, reg, 2);
+}
+
 void							dump_regs_name(WINDOW *win)
 {
   size_t						idx;
@@ -73,4 +79,16 @@ void							dump_regs(struct user_regs_struct *old_regs,
   wrefresh(win);
   usleep(10000);
   restore_regs_color(win, regs_hl);
+}
+
+int						update_regs(pid_t pid, struct user_regs_struct *regs,
+									struct user_regs_struct *old_regs)
+{
+	memcpy(old_regs, regs, sizeof(*old_regs));
+	if (ptrace(PTRACE_GETREGS, pid, NULL, regs))
+	{
+		memcpy(regs, old_regs, sizeof(*regs));
+		return (-1);
+	}
+	return (0);
 }

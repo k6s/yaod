@@ -1,35 +1,6 @@
 #include <see_stack.h>
 #include <elf_parse.h>
 
-int					help(t_term *s_term, char UN **av)
-{
-	WINDOW			*win;
-
-	win = s_term->slave.wins[WIN_SH];
-	wprintw(win, "Control slave:\n");
-	wprintw(win, "\ts               - step\n");
-	wprintw(win, "\trb              - run / continue blind mode\n");
-	wprintw(win, "\tr               - run / continue\n");
-	wprintw(win, "\tb 0xdeadbeef    - break at address 0xdeadbeef\n");
-	wprintw(win, "\tbl              - list breakpoints\n");
-	wprintw(win, "\tbd 1            - delete breakpoint 1\n");
-	wprintw(win, "\nSlave's info:\n");
-	wprintw(win, "\tip    - info program headers\n");
-	wprintw(win, "\tid    - info dyntab\n");
-	wprintw(win, "\tids   - info dynamic symbols\n");
-	wprintw(win, "\tis    - info symtab\n");
-	wprintw(win, "\tish   - info section headers\n");
-	wprintw(win, "\til    - info link map\n");
-	wprintw(win, "\nPrint memory content:\n");
-	wprintw(win, "\tp 0xdeadbeff        - print value at 0xdeadbeef\n");
-	wprintw(win, "\tps 0xdeadbeef 123   - print 123 strings starting from 0xdeadbeef\n");
-	wprintw(win, "\tpx 0xdeadbeff 123   - print hexdump for content at\
-0xdeadbeef, 123 bytes length\n");
-	wprintw(win, "\tpxa 0xdeadbeff 123  - print hexdump and ascii for content\
-at 0xdeadbeef, 123 bytes length\n");
-	return (0);
-}
-
 void				info_title(WINDOW *win, char *title)
 {
 	wattrset(win, A_BOLD);

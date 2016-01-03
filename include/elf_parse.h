@@ -14,6 +14,19 @@
 
 typedef struct s_elf		t_elf;		/*! @brief typedef to @ref s_elf */
 typedef struct s_elf_sha	t_elf_sha;
+typedef struct s_fsym		t_fsym;
+
+struct				s_fsym
+{
+	u_long			addr;
+	u_long			end;
+	t_fsym			*nxt;
+	t_fsym			*prv;
+	char			*name;
+};
+
+t_fsym				*fnt_fsym_strpd(int pid, t_elf *elf);
+void				fsym_free(t_fsym *fsym);
 
 /*!
  * @brief Info about elf executable (from process memory,
@@ -38,6 +51,7 @@ struct						s_elf
 	struct link_map			*link_map;
 	char					linked;
 	char					stripped;
+	t_fsym					*fsym;
 	t_elf_sha				*sha;
 };
 
